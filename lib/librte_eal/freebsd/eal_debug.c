@@ -2,6 +2,7 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#undef RTE_BACKTRACE
 #ifdef RTE_BACKTRACE
 #include <execinfo.h>
 #endif

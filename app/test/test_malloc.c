@@ -57,6 +57,7 @@ is_memory_overlap(void *p1, size_t len1, void *p2, size_t len2)
 	return 0;
 }
 
+#ifndef is_aligned
 static int
 is_aligned(void *p, int align)
 {
@@ -67,6 +68,7 @@ is_aligned(void *p, int align)
 		return 0;
 	return 1;
 }
+#endif
 
 static int
 test_align_overlap_per_lcore(__rte_unused void *arg)
