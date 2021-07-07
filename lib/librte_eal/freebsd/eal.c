@@ -673,11 +673,11 @@ rte_eal_init(int argc, char **argv)
 		eal_get_internal_configuration();
 
 	/* checks if the machine is adequate */
-	if (!rte_cpu_is_supported()) {
+	/*if (!rte_cpu_is_supported()) {
 		rte_eal_init_alert("unsupported cpu type.");
 		rte_errno = ENOTSUP;
 		return -1;
-	}
+	}*/
 
 	if (!__atomic_compare_exchange_n(&run_once, &has_run, 1, 0,
 					__ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
@@ -780,7 +780,7 @@ rte_eal_init(int argc, char **argv)
 			internal_conf->iova_mode;
 	}
 
-	RTE_LOG(INFO, EAL, "Selected IOVA mode '%s'\n",
+	RTE_LOG(INFO, EAL, "In BSD Selected IOVA mode '%s'\n",
 		rte_eal_iova_mode() == RTE_IOVA_PA ? "PA" : "VA");
 
 	if (internal_conf->no_hugetlbfs == 0) {
