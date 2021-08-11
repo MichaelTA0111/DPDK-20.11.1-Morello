@@ -373,7 +373,7 @@ class ReadElf(object):
                 dtr = self.get_dt_runpath(section)
                 library = search_file(eallib,
                                       dtr + ":" + ldlibpath +
-                                      ":/usr/lib64:/lib64:/usr/lib:/lib")
+                                      ":/usr/lib:/lib:/usr/lib64:/lib64")
                 if library is None:
                     return (None, None)
                 if not raw_output:
@@ -449,7 +449,7 @@ class ReadElf(object):
                 if 'librte_' in force_unicode(tag.needed):
                     library = search_file(force_unicode(tag.needed),
                                           runpath + ":" + ldlibpath +
-                                          ":/usr/lib64:/lib64:/usr/lib:/lib")
+                                          ":/usr/lib:/lib:/usr/lib64:/lib64")
                     if library is not None:
                         with open(library, 'rb') as file:
                             try:
@@ -603,7 +603,7 @@ def main(stream=None):
         myelffile = args.elf_file
     else:
         myelffile = search_file(args.elf_file,
-                                ldlibpath + ":/usr/lib64:/lib64:/usr/lib:/lib")
+                                ldlibpath + ":/usr/lib:/lib:/usr/lib64:/lib64")
 
     if myelffile is None:
         print("File not found")

@@ -5,7 +5,7 @@ if is_windows
 	subdir_done()
 endif
 
-pmdinfogen_inc = [global_inc]
+pmdinfogen_inc = [pmd_inc]
 pmdinfogen_inc += include_directories('../../lib/librte_eal/include')
 pmdinfogen_inc += include_directories('../../lib/librte_pci')
 pmdinfogen = executable('pmdinfogen',

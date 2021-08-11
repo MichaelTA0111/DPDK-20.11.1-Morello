@@ -31,6 +31,13 @@ elif host_machine.cpu_family().startswith('ppc')
 	arch_subdir = 'ppc'
 endif
 
+pmd_inc = include_directories('.', 'config',
+	'lib/librte_eal/include',
+	'lib/librte_eal/linux/include',
+	'lib/librte_eal/@0@/include'.format(arch_subdir),
+)
+
+
 # configure the build, and make sure configs here and in config folder are
 # able to be included in any file. We also store a global array of include dirs
 # for passing to pmdinfogen scripts

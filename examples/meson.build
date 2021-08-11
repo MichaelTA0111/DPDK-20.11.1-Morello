@@ -24,7 +24,7 @@ all_examples = [
 	'l2fwd-crypto', 'l2fwd-jobstats',
 	'l2fwd-keepalive', 'l3fwd',
 	'l3fwd-acl', 'l3fwd-power', 'l3fwd-graph',
-	'link_status_interrupt',
+	'link_status_interrupt','Limelight_Dpdk',
 	'multi_process/client_server_mp/mp_client',
 	'multi_process/client_server_mp/mp_server',
 	'multi_process/hotplug_mp',
@@ -73,6 +73,7 @@ foreach example: examples
 	build = true
 	sources = []
 	allow_experimental_apis = false
+	default_cflags += ['-femulated-tls']
 	cflags = default_cflags
 	ldflags = default_ldflags
 

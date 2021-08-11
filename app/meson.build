@@ -7,19 +7,19 @@ endif
 
 apps = [
 	'pdump',
-	'proc-info',
-	'test-acl',
-	'test-bbdev',
-	'test-cmdline',
-	'test-compress-perf',
-	'test-crypto-perf',
-	'test-eventdev',
-	'test-fib',
-	'test-flow-perf',
-	'test-pipeline',
-	'test-pmd',
-	'test-regex',
-	'test-sad']
+	'proc-info']
+	##'test-acl',
+	#'test-bbdev',
+	#'test-cmdline',
+	#'test-compress-perf',
+	#'test-crypto-perf',
+	#'test-eventdev',
+	#'test-fib',
+	#'test-flow-perf',
+	#'test-pipeline',
+	#'test-pmd',
+	#'test-regex',
+	#'test-sad']
 
 # for BSD only
 lib_execinfo = cc.find_library('execinfo', required: false)
@@ -35,6 +35,7 @@ foreach app:apps
 	name = app
 	sources = []
 	includes = []
+	default_cflags += ['-femulated-tls']
 	cflags = default_cflags
 	ldflags = default_ldflags
 	objs = [] # other object files to link against, used e.g. for
