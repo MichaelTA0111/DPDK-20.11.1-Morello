@@ -253,7 +253,7 @@ struct dsw_ctl_msg {
 	uint8_t originating_port_id;
 	uint8_t qfs_len;
 	struct dsw_queue_flow qfs[DSW_MAX_FLOWS_PER_MIGRATION];
-} __rte_aligned(4);
+} __rte_aligned(16);
 
 uint16_t dsw_event_enqueue(void *port, const struct rte_event *event);
 uint16_t dsw_event_enqueue_burst(void *port,

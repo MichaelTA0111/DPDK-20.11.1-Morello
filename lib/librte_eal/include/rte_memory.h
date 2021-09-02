@@ -55,7 +55,7 @@ struct rte_memseg {
 	uint32_t nchannel;          /**< Number of channels. */
 	uint32_t nrank;             /**< Number of ranks. */
 	uint32_t flags;             /**< Memseg-specific flags */
-} __rte_packed;
+}__rte_packed;
 
 /**
  * memseg list is a special case as we need to store a bunch of other data

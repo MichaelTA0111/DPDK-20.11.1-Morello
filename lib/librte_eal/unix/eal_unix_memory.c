@@ -11,6 +11,8 @@
 #include <rte_log.h>
 
 #include "eal_private.h"
+#include <cheri/cheri.h>
+#include <cheri/cheric.h>
 
 #ifdef RTE_EXEC_ENV_LINUX
 #define EAL_DONTDUMP MADV_DONTDUMP
@@ -34,6 +36,17 @@ mem_map(void *requested_addr, size_t size, int prot, int flags,
 			strerror(errno));
 		rte_errno = errno;
 		return NULL;
+	}
+	RTE_LOG(ERR, EAL, "Virt address is  %p requested address is %p (size = 0x%zx)  \n",
+		virt,requested_addr,size);
+	if (cheri_gettag(virt) != 1)
+
+	{
+		printf("virt has no tag \n");
+	}
+	else
+	{
+		printf("virt has tag \n");
 	}
 	return virt;
 }
@@ -67,7 +80,7 @@ eal_mem_reserve(void *requested_addr, size_t size, int flags)
 	if (flags & EAL_RESERVE_FORCE_ADDRESS)
 		sys_flags |= MAP_FIXED;
 
-	return mem_map(requested_addr, size, PROT_NONE, sys_flags, -1, 0);
+	return mem_map(requested_addr, size, PROT_READ | PROT_WRITE, sys_flags, -1, 0);
 }
 
 void

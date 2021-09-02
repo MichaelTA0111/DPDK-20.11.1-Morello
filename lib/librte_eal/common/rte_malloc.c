@@ -60,7 +60,7 @@ malloc_socket(const char *type, size_t size, unsigned int align,
 		int socket_arg, const bool trace_ena)
 {
 	void *ptr;
-
+	RTE_LOG(ERR, EAL, "malloc socket\n");
 	/* return NULL if size is 0 or alignment is not power-of-2 */
 	if (size == 0 || (align && !rte_is_power_of_2(align)))
 		return NULL;
@@ -79,7 +79,7 @@ malloc_socket(const char *type, size_t size, unsigned int align,
 
 	if (trace_ena)
 		rte_eal_trace_mem_malloc(type, size, align, socket_arg, ptr);
-	return ptr;
+	return (__intcap_t*) ptr;
 }
 
 /*
@@ -89,6 +89,7 @@ void *
 rte_malloc_socket(const char *type, size_t size, unsigned int align,
 		int socket_arg)
 {
+	RTE_LOG(ERR, EAL, "RTE Malloc Socket\n");
 	return malloc_socket(type, size, align, socket_arg, true);
 }
 
@@ -163,6 +164,7 @@ void *
 rte_realloc_socket(void *ptr, size_t size, unsigned int align, int socket)
 {
 	if (ptr == NULL)
+		RTE_LOG(ERR, EAL, "ptr=NULL\n");
 		return rte_malloc_socket(NULL, size, align, socket);
 
 	struct malloc_elem *elem = malloc_elem_from_data(ptr);
@@ -180,6 +182,7 @@ rte_realloc_socket(void *ptr, size_t size, unsigned int align, int socket)
 	     (unsigned int)socket == elem->heap->socket_id) &&
 			RTE_PTR_ALIGN(ptr, align) == ptr &&
 			malloc_heap_resize(elem, size) == 0) {
+				RTE_LOG(ERR, EAL, "Checking socket\n");
 		rte_eal_trace_mem_realloc(size, align, socket, ptr);
 		return ptr;
 	}
@@ -197,7 +200,7 @@ rte_realloc_socket(void *ptr, size_t size, unsigned int align, int socket)
 	rte_free(ptr);
 
 	rte_eal_trace_mem_realloc(size, align, socket, new_ptr);
-	return new_ptr;
+	return (__intcap_t*) new_ptr;
 }
 
 /*

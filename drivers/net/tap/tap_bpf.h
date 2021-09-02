@@ -84,7 +84,7 @@ union bpf_attr {
 		__u32		kern_version;
 		__u32		prog_flags;
 	};
-} __rte_aligned(8);
+} __rte_aligned(16);
 
 #ifndef __NR_bpf
 # if defined(__i386__)

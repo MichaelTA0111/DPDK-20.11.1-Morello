@@ -419,7 +419,7 @@ union acc100_harq_layout_data {
 		uint16_t offset;
 		uint16_t size0;
 	};
-} __rte_packed;
+} ;
 
 
 /* Union describing Info Ring entry */
@@ -441,7 +441,7 @@ union acc100_info_ring_data {
 		uint16_t loop: 1;
 		uint16_t valid: 1;
 	};
-} __rte_packed;
+} ;
 
 struct acc100_registry_addr {
 	unsigned int dma_ring_dl5g_hi;

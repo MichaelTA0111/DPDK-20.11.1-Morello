@@ -27,6 +27,8 @@
 #include "eal_memcfg.h"
 #include "eal_options.h"
 #include "malloc_heap.h"
+#include <cheri/cheri.h>
+#include <cheri/cheric.h>
 
 /*
  * Try to mmap *size bytes in /dev/zero. If it is successful, return the
@@ -55,7 +57,7 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 
 	if (system_page_sz == 0)
 		system_page_sz = rte_mem_page_size();
-
+	RTE_LOG(ERR, EAL, "Ask a virtual area of 0x%zx bytes\n", *size);
 	RTE_LOG(DEBUG, EAL, "Ask a virtual area of 0x%zx bytes\n", *size);
 
 	addr_is_hint = (flags & EAL_VIRTUAL_AREA_ADDR_IS_HINT) > 0;
@@ -69,7 +71,7 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 #ifdef RTE_ARCH_64
 	if (next_baseaddr == NULL && internal_conf->base_virtaddr == 0 &&
 			rte_eal_process_type() == RTE_PROC_PRIMARY)
-		next_baseaddr = (void *) eal_get_baseaddr();
+		next_baseaddr = (void *)eal_get_baseaddr();
 #endif
 	if (requested_addr == NULL && next_baseaddr != NULL) {
 		requested_addr = next_baseaddr;
@@ -90,29 +92,58 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 		!addr_is_hint) ||
 		page_sz == system_page_sz;
 
-	do {
+	do
+	{
 		map_sz = no_align ? *size : *size + page_sz;
 		if (map_sz > SIZE_MAX) {
 			RTE_LOG(ERR, EAL, "Map size too big\n");
 			rte_errno = E2BIG;
 			return NULL;
 		}
-
+		requested_addr=NULL;
 		mapped_addr = eal_mem_reserve(
 			requested_addr, (size_t)map_sz, reserve_flags);
+		if (cheri_gettag(mapped_addr) != 1)
+		{
+			printf("mapped_addr has no tag \n");
+		}
+		else
+		{
+			printf("mapped_addr has tag \n");
+		}
+		RTE_LOG(ERR, EAL, "mapped_addr %p   \n\n",
+		mapped_addr );
+
 		if ((mapped_addr == NULL) && allow_shrink)
-			*size -= page_sz;
+		{
+			/*if (cheri_gettag(mapped_addr) != 0)
+			{
+				printf("mapped_addr2 has tag \n");
+			}*/
+				*size -= page_sz;
+		}
+
 
 		if ((mapped_addr != NULL) && addr_is_hint &&
-				(mapped_addr != requested_addr)) {
+				(mapped_addr != requested_addr))
+		{
+			printf("Hello \n");
 			try++;
+			if (cheri_gettag(mapped_addr) != 0)
+			{
+				printf("mapped_addr3 has tag \n");
+			}
 			next_baseaddr = RTE_PTR_ADD(next_baseaddr, page_sz);
 			if (try <= MAX_MMAP_WITH_DEFINED_ADDR_TRIES) {
 				/* hint was not used. Try with another offset */
 				eal_mem_free(mapped_addr, map_sz);
 				mapped_addr = NULL;
 				requested_addr = next_baseaddr;
-			}
+				if (cheri_gettag(mapped_addr) != 0)
+				{
+					printf("mapped_addr4 has tag \n");
+				}
+		}
 		}
 	} while ((allow_shrink || addr_is_hint) &&
 		(mapped_addr == NULL) && (*size > 0));
@@ -120,8 +151,26 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 	/* align resulting address - if map failed, we will ignore the value
 	 * anyway, so no need to add additional checks.
 	 */
+	/*RTE_LOG(ERR, EAL, "mapped_addr5 %p   \n\n",
+		mapped_addr);
+	if (cheri_gettag(mapped_addr) != 1)
+	{
+		printf("mapped_addr5 has no tag \n");
+	}
+	else
+	{
+		printf("mapped_addr5 has tag \n");
+	}*/
 	aligned_addr = no_align ? mapped_addr :
 			RTE_PTR_ALIGN(mapped_addr, page_sz);
+	if (cheri_gettag(aligned_addr) != 1)
+	{
+		printf("aligned_addr2 has no tag \n");
+	}
+	else
+	{
+		printf("aligned_addr2 has tag \n");
+	}
 
 	if (*size == 0) {
 		RTE_LOG(ERR, EAL, "Cannot get a virtual area of any size: %s\n",
@@ -140,21 +189,30 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 		return NULL;
 	} else if (requested_addr != NULL && addr_is_hint &&
 			aligned_addr != requested_addr) {
-		RTE_LOG(WARNING, EAL, "WARNING! Base virtual address hint (%p != %p) not respected!\n",
+		RTE_LOG(ERR, EAL, "WARNING! Base virtual address hint (%p != %p) not respected!\n",
 			requested_addr, aligned_addr);
-		RTE_LOG(WARNING, EAL, "   This may cause issues with mapping memory into secondary processes\n");
+		RTE_LOG(ERR, EAL, "   This may cause issues with mapping memory into secondary processes\n");
 	} else if (next_baseaddr != NULL) {
 		next_baseaddr = RTE_PTR_ADD(aligned_addr, *size);
 	}
-
-	RTE_LOG(DEBUG, EAL, "Virtual area found at %p (size = 0x%zx)\n",
+	if (cheri_gettag(aligned_addr) != 1)
+	{
+		printf("aligned_addr1 has no tag \n");
+	}
+	else
+	{
+		printf("aligned_addr1 has tag \n");
+	}
+	RTE_LOG(ERR, EAL, "Virtual area found at %p (size = 0x%zx)\n",
 		aligned_addr, *size);
 
 	if (unmap) {
+		RTE_LOG(ERR, EAL, "eal_mem_free\n");
 		eal_mem_free(mapped_addr, map_sz);
 	} else if (!no_align) {
 		void *map_end, *aligned_end;
 		size_t before_len, after_len;
+		RTE_LOG(ERR, EAL, "!no align\n");
 
 		/* when we reserve space with alignment, we add alignment to
 		 * mapping size. On 32-bit, if 1GB alignment was requested, this
@@ -181,7 +239,17 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 		/* Exclude these pages from a core dump. */
 		eal_mem_set_dump(aligned_addr, *size, false);
 	}
+	RTE_LOG(ERR, EAL, "Virtual Aligned address is %p (size = 0x%zx)\n",
+		aligned_addr, *size);
+	if (cheri_gettag(aligned_addr) != 1)
 
+	{
+		printf("aligned_addr has no tag \n");
+	}
+	else
+	{
+		printf("aligned_addr has tag \n");
+	}
 	return aligned_addr;
 }
 
@@ -680,6 +748,39 @@ rte_memseg_contig_walk_thread_unsafe(rte_memseg_contig_walk_t func, void *arg)
 			 */
 			n_segs = rte_fbarray_find_contig_used(arr, ms_idx);
 			len = n_segs * msl->page_sz;
+			if (cheri_gettag(func) != 1)
+			{
+				printf("func has no tag \n");
+			}
+			else
+			{
+				printf("func has tag \n");
+			}
+
+			if (cheri_gettag(msl) != 1)
+			{
+				printf("msl has no tag \n");
+			}
+			else
+			{
+				printf("msl has tag \n");
+			}
+			if (cheri_gettag(ms) != 1)
+			{
+				printf("ms has no tag \n");
+			}
+			else
+			{
+				printf("ms has tag \n");
+			}
+			if (cheri_gettag(arg) != 1)
+			{
+				printf("arg has no tag \n");
+			}
+			else
+			{
+				printf("arg has tag \n");
+			}
 
 			ret = func(msl, ms, len, arg);
 			if (ret)
@@ -695,6 +796,22 @@ int
 rte_memseg_contig_walk(rte_memseg_contig_walk_t func, void *arg)
 {
 	int ret = 0;
+	if (cheri_gettag(func) != 1)
+	{
+		printf("func 1 has no tag \n");
+	}
+	else
+	{
+		printf("func 1 has tag \n");
+	}
+	if (cheri_gettag(arg) != 1)
+	{
+		printf("arg1 has no tag \n");
+	}
+	else
+	{
+		printf("arg1 has tag \n");
+	}
 
 	/* do not allow allocations/frees/init while we iterate */
 	rte_mcfg_mem_read_lock();

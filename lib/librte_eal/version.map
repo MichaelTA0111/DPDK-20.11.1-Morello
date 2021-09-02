@@ -5,10 +5,10 @@ DPDK_21 {
 	eal_parse_sysfs_value;
 	eal_timer_source;
 	per_lcore__lcore_id;
-	per_lcore__rte_errno;
-	per_lcore__thread_id;
 	__emutls_v.per_lcore__lcore_id;
+	per_lcore__rte_errno;
 	__emutls_v.per_lcore__rte_errno;
+	per_lcore__thread_id;
 	__emutls_v.per_lcore__thread_id;
 	__emutls_v.per_lcore_trace_mem;
 	__emutls_v.per_lcore_trace_point_sz;

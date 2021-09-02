@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <machine/_stdint.h>
+#include <sys/_stdint.h>
 #include <stdbool.h>
 #include <errno.h>
 #include <stdarg.h>

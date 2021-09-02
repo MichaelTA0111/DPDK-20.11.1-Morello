@@ -24,21 +24,21 @@
  *
  * a = (rte_v64u8_t){ a0, a1, a2, a3, a4, a5, a6, a7 }
  */
-typedef uint8_t rte_v64u8_t __attribute__((vector_size(8), aligned(8)));
+typedef uint8_t rte_v64u8_t __attribute__((vector_size(8), aligned(16)));
 
 /**
  * 64 bits vector size to use with unsigned 16 bits elements.
  *
  * a = (rte_v64u16_t){ a0, a1, a2, a3 }
  */
-typedef uint16_t rte_v64u16_t __attribute__((vector_size(8), aligned(8)));
+typedef uint16_t rte_v64u16_t __attribute__((vector_size(8), aligned(16)));
 
 /**
  * 64 bits vector size to use with unsigned 32 bits elements.
  *
  * a = (rte_v64u32_t){ a0, a1 }
  */
-typedef uint32_t rte_v64u32_t __attribute__((vector_size(8), aligned(8)));
+typedef uint32_t rte_v64u32_t __attribute__((vector_size(8), aligned(16)));
 
 /**
  * 128 bits vector size to use with unsigned 8 bits elements.
@@ -109,21 +109,21 @@ typedef uint64_t rte_v256u64_t __attribute__((vector_size(32), aligned(32)));
  *
  * a = (rte_v64s8_t){ a0, a1, a2, a3, a4, a5, a6, a7 }
  */
-typedef int8_t rte_v64s8_t __attribute__((vector_size(8), aligned(8)));
+typedef int8_t rte_v64s8_t __attribute__((vector_size(8), aligned(16)));
 
 /**
  * 64 bits vector size to use with 16 bits elements.
  *
  * a = (rte_v64s16_t){ a0, a1, a2, a3 }
  */
-typedef int16_t rte_v64s16_t __attribute__((vector_size(8), aligned(8)));
+typedef int16_t rte_v64s16_t __attribute__((vector_size(8), aligned(16)));
 
 /**
  * 64 bits vector size to use with 32 bits elements.
  *
  * a = (rte_v64s32_t){ a0, a1 }
  */
-typedef int32_t rte_v64s32_t __attribute__((vector_size(8), aligned(8)));
+typedef int32_t rte_v64s32_t __attribute__((vector_size(8), aligned(16)));
 
 /**
  * 128 bits vector size to use with 8 bits elements.

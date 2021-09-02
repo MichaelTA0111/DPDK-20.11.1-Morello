@@ -44,7 +44,7 @@ pmd_inc = include_directories('.', 'config',
 global_inc = include_directories('.', 'config',
 	'lib/librte_eal/include',
 	'lib/librte_eal/@0@/include'.format(host_machine.system()),
-	'lib/librte_eal/@0@/include'.format(arch_subdir),
+	'lib/librte_eal/@0@/include'.format(arch_subdir)
 )
 
 # do configuration and get tool paths

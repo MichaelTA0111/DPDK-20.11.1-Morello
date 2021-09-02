@@ -23,6 +23,8 @@
 #include "eal_memalloc.h"
 #include "malloc_elem.h"
 #include "malloc_heap.h"
+#include <cheri/cheri.h>
+#include <cheri/cheric.h>
 
 /*
  * If debugging is enabled, freed memory is set to poison value
@@ -131,6 +133,14 @@ malloc_elem_init(struct malloc_elem *elem, struct malloc_heap *heap,
 		struct rte_memseg_list *msl, size_t size,
 		struct malloc_elem *orig_elem, size_t orig_size)
 {
+	if (cheri_gettag(elem) != 1)
+	{
+		printf("elem has no tag \n");
+	}
+	else
+	{
+		printf("elem has tag \n");
+	}
 	elem->heap = heap;
 	elem->msl = msl;
 	elem->prev = NULL;

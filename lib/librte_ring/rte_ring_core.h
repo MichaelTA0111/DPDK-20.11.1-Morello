@@ -82,7 +82,7 @@ struct rte_ring_headtail {
 
 union __rte_ring_rts_poscnt {
 	/** raw 8B value to read/write *cnt* and *pos* as one atomic op */
-	uint64_t raw __rte_aligned(8);
+	uint64_t raw __rte_aligned(16);
 	struct {
 		uint32_t cnt; /**< head/tail reference counter */
 		uint32_t pos; /**< head/tail position */
@@ -98,7 +98,7 @@ struct rte_ring_rts_headtail {
 
 union __rte_ring_hts_pos {
 	/** raw 8B value to read/write *head* and *tail* as one atomic op */
-	uint64_t raw __rte_aligned(8);
+	uint64_t raw __rte_aligned(16);
 	struct {
 		uint32_t head; /**< head position */
 		uint32_t tail; /**< tail position */

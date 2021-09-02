@@ -25,6 +25,7 @@ apps = [
 lib_execinfo = cc.find_library('execinfo', required: false)
 
 default_cflags = machine_args + ['-DALLOW_EXPERIMENTAL_API']
+default_cflags += ['-femulated-tls']
 default_ldflags = []
 if get_option('default_library') == 'static' and not is_windows
 	default_ldflags += ['-Wl,--export-dynamic']

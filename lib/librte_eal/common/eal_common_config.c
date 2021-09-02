@@ -54,7 +54,7 @@ rte_eal_get_configuration(void)
 struct internal_config *
 eal_get_internal_configuration(void)
 {
-	return &internal_config;
+	return (__intcap_t*)&internal_config;
 }
 
 enum rte_iova_mode

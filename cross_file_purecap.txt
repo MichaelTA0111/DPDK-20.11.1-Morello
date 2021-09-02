@@ -1,0 +1,31 @@
+[properties]
+
+sysroot='/home/build/cheri/output/rootfs-morello-purecap'
+
+root = '/home/build/cheri/output/rootfs-morello-purecap'
+prefix = '/home/build/cheri/output/rootfs-morello-purecap'
+c_args = ['-target', 'aarch64-unknown-freebsd13','--sysroot=/home/build/cheri/output/rootfs-morello-purecap']
+c_link_args=['-g','-O2,','-target','aarch64-unknown-freebsd13','--sysroot=/home/build/cheri/output/rootfs-morello-purecap','-B/home/build/cheri/output/morello-sdk/bin','-march=morello+c64','-mabi=purecap','-femulated-tls','-Wall','-Wcheri','-fuse-ld=lld','-L/home/build/cheri/output/rootfs-morello-purecap/usr/libcheri/','-I/home/build/cheri/output/rootfs-morello-purecap/usr/include','-lm','-Wl','-z','notext']
+platform ='generic'
+
+
+
+[binaries]
+c = '/home/build/cheri/output/morello-sdk/bin/aarch64-unknown-freebsd-clang'
+cpp = '/home/build/cheri/output/morello-sdk/bin/aarch64-unknown-freebsd-cpp'
+ar = '/home/build/cheri/output/morello-sdk/bin/aarch64-unknown-freebsd-ar'
+strip = '/home/build/cheri/output/morello-sdk/bin/aarch64-unknown-freebsd-strip'
+ld = '/home/build/cheri/output/morello-sdk/bin/aarch64-unknown-freebsd-ld'
+readelf = '/home/build/cheri/output/morello-sdk/bin/aarch64-unknown-freebsd-readelf'
+objcopy = '/home/build/cheri/output/morello-sdk/bin/aarch64-unknown-freebsd-objcopy'
+PKG_CONFIG_PATH=' '
+PKG_CONFIG_LIBDIR= ' '
+
+[host_machine]
+system = 'freebsd'
+cpu_family = 'aarch64'
+cpu = 'arm'
+endian = 'little'
+
+
+

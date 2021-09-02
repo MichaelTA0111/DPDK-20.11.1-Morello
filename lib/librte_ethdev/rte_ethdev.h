@@ -315,8 +315,7 @@ struct rte_eth_link {
 	uint16_t link_duplex  : 1;  /**< ETH_LINK_[HALF/FULL]_DUPLEX */
 	uint16_t link_autoneg : 1;  /**< ETH_LINK_[AUTONEG/FIXED] */
 	uint16_t link_status  : 1;  /**< ETH_LINK_[DOWN/UP] */
-} __rte_aligned(8);      /**< aligned for atomic64 read/write */
-
+} __rte_aligned(16);
 /* Utility constants */
 #define ETH_LINK_HALF_DUPLEX 0 /**< Half-duplex connection (see link_duplex). */
 #define ETH_LINK_FULL_DUPLEX 1 /**< Full-duplex connection (see link_duplex). */

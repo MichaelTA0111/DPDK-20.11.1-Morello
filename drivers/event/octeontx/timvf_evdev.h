@@ -139,7 +139,7 @@ struct tim_mem_bucket {
 	};
 	uint64_t current_chunk;
 	uint64_t pad;
-} __rte_packed __rte_aligned(8);
+} __rte_packed __rte_aligned(16);
 
 struct tim_mem_entry {
 	uint64_t w0;

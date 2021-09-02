@@ -14,6 +14,7 @@
 #include <rte_string_fns.h>
 #include <rte_common.h>
 #include <rte_spinlock.h>
+//#include <runetype.h>
 
 #include "rte_telemetry_legacy.h"
 

@@ -31,6 +31,8 @@
 #include "malloc_elem.h"
 #include "malloc_heap.h"
 #include "malloc_mp.h"
+#include <cheri/cheri.h>
+#include <cheri/cheric.h>
 
 /* start external socket ID's at a very high number */
 #define CONST_MAX(a, b) (a > b ? a : b) /* RTE_MAX is not a constant */
@@ -96,7 +98,47 @@ malloc_heap_add_memory(struct malloc_heap *heap, struct rte_memseg_list *msl,
 		void *start, size_t len)
 {
 	struct malloc_elem *elem = start;
+	if (cheri_gettag(start) != 1)
+	{
+		printf("start has no tag \n");
+	}
+	else
+	{
+		printf("start has tag \n");
+	}
 
+	if (cheri_gettag(heap) != 1)
+	{
+		printf("heap has no tag \n");
+	}
+	else
+	{
+		printf("heap has tag \n");
+	}
+	if (cheri_gettag(elem) != 1)
+	{
+		printf("elem1 has no tag \n");
+	}
+	else
+	{
+		printf("elem1 has tag \n");
+	}
+	if (cheri_gettag(msl) != 1)
+	{
+		printf("msl has no tag \n");
+	}
+	else
+	{
+		printf("msl has tag \n");
+	}
+	if (cheri_gettag(elem) != 1)
+	{
+		printf("elem has no tag \n");
+	}
+	else
+	{
+		printf("elem has tag \n");
+	}
 	malloc_elem_init(elem, heap, msl, len, elem, len);
 
 	malloc_elem_insert(elem);
@@ -110,7 +152,7 @@ malloc_heap_add_memory(struct malloc_heap *heap, struct rte_memseg_list *msl,
 
 static int
 malloc_add_seg(const struct rte_memseg_list *msl,
-		const struct rte_memseg *ms, size_t len, void *arg __rte_unused)
+		const struct rte_memseg * ms, size_t len, void *arg __rte_unused)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	struct rte_memseg_list *found_msl;
@@ -134,7 +176,31 @@ malloc_add_seg(const struct rte_memseg_list *msl,
 		return -1;
 
 	found_msl = &mcfg->memsegs[msl_idx];
+	if (cheri_gettag(heap) != 1)
+	{
+		printf("heap2 has no tag \n");
+	}
+	else
+	{
+		printf("heap2 has tag \n");
+	}
 
+	if (cheri_gettag(found_msl) != 1)
+	{
+		printf("found_msl has no tag \n");
+	}
+	else
+	{
+		printf("found_msl has tag \n");
+	}
+	if (cheri_gettag(ms->addr) != 1)
+	{
+		printf("ms->addr has no tag \n");
+	}
+	else
+	{
+		printf("ms->addr has tag \n");
+	}
 	malloc_heap_add_memory(heap, found_msl, ms->addr, len);
 
 	heap->total_size += len;
@@ -1367,6 +1433,14 @@ rte_eal_malloc_heap_init(void)
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
+	if (cheri_gettag(malloc_add_seg) != 1)
+	{
+		printf("malloc_add_seg has no tag \n");
+	}
+	else
+	{
+		printf("malloc_add_seg has tag \n");
+	}
 	/* add all IOVA-contiguous areas to the heap */
 	return rte_memseg_contig_walk(malloc_add_seg, NULL);
 }

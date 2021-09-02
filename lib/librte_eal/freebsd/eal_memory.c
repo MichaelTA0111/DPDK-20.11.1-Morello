@@ -20,6 +20,8 @@
 #include "eal_filesystem.h"
 #include "eal_memcfg.h"
 #include "eal_options.h"
+#include <cheri/cheri.h>
+#include <cheri/cheric.h>
 
 #define EAL_PAGE_SIZE (sysconf(_SC_PAGESIZE))
 
@@ -41,6 +43,7 @@ rte_mem_virt2phy(const void *virtaddr)
 {
 	/* XXX not implemented. This function is only used by
 	 * rte_mempool_virt2iova() when hugepages are disabled. */
+	RTE_LOG(ERR, EAL, "in non implemented function\n");
 	(void)virtaddr;
 	return RTE_BAD_IOVA;
 }
@@ -59,7 +62,7 @@ rte_eal_hugepage_init(void)
 	unsigned int i, j, seg_idx = 0;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-
+	RTE_LOG(ERR, EAL, "in ret_eal_hugepage_init\n");
 	/* get pointer to global configuration */
 	mcfg = rte_eal_get_configuration()->mem_config;
 
@@ -186,6 +189,14 @@ rte_eal_hugepage_init(void)
 			/* address is already mapped in memseg list, so using
 			 * MAP_FIXED here is safe.
 			 */
+			if (cheri_gettag(addr) != 1)
+			{
+				printf("addr has no tag \n");
+			}
+			else
+			{
+				printf("maddr has tag \n");
+			}
 			addr = mmap(addr, page_sz, PROT_READ|PROT_WRITE,
 					MAP_SHARED | MAP_FIXED,
 					hpi->lock_descriptor,

@@ -66,12 +66,15 @@ extern "C" {
 /**
  * Force alignment
  */
+
 #define __rte_aligned(a) __attribute__((__aligned__(a)))
 
+//#define __rte_packed __attribute__((packed,aligned(alignof(void *) > 8 ? alignof(void *) : 8)))
+
 #ifdef RTE_ARCH_STRICT_ALIGN
-typedef uint64_t unaligned_uint64_t __rte_aligned(1);
-typedef uint32_t unaligned_uint32_t __rte_aligned(1);
-typedef uint16_t unaligned_uint16_t __rte_aligned(1);
+typedef uint64_t unaligned_uint64_t __rte_aligned(16);
+typedef uint32_t unaligned_uint32_t __rte_aligned(16);
+typedef uint16_t unaligned_uint16_t __rte_aligned(16);
 #else
 typedef uint64_t unaligned_uint64_t;
 typedef uint32_t unaligned_uint32_t;
@@ -257,7 +260,8 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
  * in bytes are the locations they point two. It is assumed that
  * ptr1 is greater than ptr2.
  */
-#define RTE_PTR_DIFF(ptr1, ptr2) ((uintptr_t)(ptr1) - (uintptr_t)(ptr2))
+//#define RTE_PTR_DIFF(ptr1, ptr2) ((uintptr_t)(ptr1) - (uintptr_t)(ptr2))
+#define RTE_PTR_DIFF(ptr1, ptr2) ((ptraddr_t)(ptr1) - (ptraddr_t)(ptr2))
 
 /**
  * Workaround to cast a const field of a structure to non-const type.
@@ -372,7 +376,7 @@ rte_is_aligned(void *ptr, unsigned align)
 /**
  * Triggers an error at compilation time if the condition is true.
  */
-#define RTE_BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
+#define RTE_BUILD_BUG_ON(condition) ((void)sizeof(char[(condition)]))
 
 /*********** Cache line related macros ********/
 

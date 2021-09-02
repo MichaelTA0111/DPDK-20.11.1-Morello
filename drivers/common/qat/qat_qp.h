@@ -72,7 +72,7 @@ struct qat_qp {
 	struct qat_pci_device *qat_dev;
 	/**< qat device this qp is on */
 	uint32_t enqueued;
-	uint32_t dequeued __rte_aligned(4);
+	uint32_t dequeued __rte_aligned(8);
 	uint16_t max_inflights;
 	uint16_t min_enq_burst_threshold;
 } __rte_cache_aligned;

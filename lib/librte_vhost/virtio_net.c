@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <linux/virtio_net.h>
+#include <machine/_stdint.h>
+#include <sys/_stdint.h>
 
 #include <rte_mbuf.h>
 #include <rte_memcpy.h>

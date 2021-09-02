@@ -31,7 +31,7 @@ struct malloc_heap {
 	unsigned int socket_id;
 	size_t total_size;
 	char name[RTE_HEAP_NAME_MAX_LEN];
-} __rte_cache_aligned;
+}__rte_cache_aligned;
 
 #ifdef __cplusplus
 extern "C" {
