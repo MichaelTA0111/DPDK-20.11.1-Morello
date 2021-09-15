@@ -38,6 +38,37 @@
  * which is a multiple of hugepage size.
  */
 
+#if __has_feature(capabilities)
+	static inline void *__capability cheri_ptr_add(void *__capability ptr, unsigned long x)
+	{
+		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
+		if (cheri_gettag(ptr) != 1){
+			//RTE_LOG(ERR, EAL, "No tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+		else {
+			assert(cheri_gettag(new_addr) != 1);
+			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+	}
+	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
+	static inline void *__capability cheri_ptr_sub(void *__capability ptr, unsigned long x)
+	{
+		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
+		if (cheri_gettag(ptr) != 1){
+			//RTE_LOG(ERR, EAL, "No tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+		else {
+			assert(cheri_gettag(new_addr) != 1);
+			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+	}
+	#define RTE_PTR_SUB(ptr, x) cheri_ptr_sub(ptr, x)
+#endif
+
 #define MEMSEG_LIST_FMT "memseg-%" PRIu64 "k-%i-%i"
 
 static void *next_baseaddr;
@@ -54,7 +85,6 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 	uint8_t try = 0;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-
 	if (system_page_sz == 0)
 		system_page_sz = rte_mem_page_size();
 	RTE_LOG(ERR, EAL, "Ask a virtual area of 0x%zx bytes\n", *size);
@@ -103,17 +133,6 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 		requested_addr=NULL;
 		mapped_addr = eal_mem_reserve(
 			requested_addr, (size_t)map_sz, reserve_flags);
-		if (cheri_gettag(mapped_addr) != 1)
-		{
-			printf("mapped_addr has no tag \n");
-		}
-		else
-		{
-			printf("mapped_addr has tag \n");
-		}
-		RTE_LOG(ERR, EAL, "mapped_addr %p   \n\n",
-		mapped_addr );
-
 		if ((mapped_addr == NULL) && allow_shrink)
 		{
 			/*if (cheri_gettag(mapped_addr) != 0)
@@ -127,23 +146,15 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 		if ((mapped_addr != NULL) && addr_is_hint &&
 				(mapped_addr != requested_addr))
 		{
-			printf("Hello \n");
 			try++;
-			if (cheri_gettag(mapped_addr) != 0)
-			{
-				printf("mapped_addr3 has tag \n");
-			}
+
 			next_baseaddr = RTE_PTR_ADD(next_baseaddr, page_sz);
 			if (try <= MAX_MMAP_WITH_DEFINED_ADDR_TRIES) {
 				/* hint was not used. Try with another offset */
 				eal_mem_free(mapped_addr, map_sz);
 				mapped_addr = NULL;
 				requested_addr = next_baseaddr;
-				if (cheri_gettag(mapped_addr) != 0)
-				{
-					printf("mapped_addr4 has tag \n");
-				}
-		}
+			}
 		}
 	} while ((allow_shrink || addr_is_hint) &&
 		(mapped_addr == NULL) && (*size > 0));
@@ -151,27 +162,9 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 	/* align resulting address - if map failed, we will ignore the value
 	 * anyway, so no need to add additional checks.
 	 */
-	/*RTE_LOG(ERR, EAL, "mapped_addr5 %p   \n\n",
-		mapped_addr);
-	if (cheri_gettag(mapped_addr) != 1)
-	{
-		printf("mapped_addr5 has no tag \n");
-	}
-	else
-	{
-		printf("mapped_addr5 has tag \n");
-	}*/
+
 	aligned_addr = no_align ? mapped_addr :
 			RTE_PTR_ALIGN(mapped_addr, page_sz);
-	if (cheri_gettag(aligned_addr) != 1)
-	{
-		printf("aligned_addr2 has no tag \n");
-	}
-	else
-	{
-		printf("aligned_addr2 has tag \n");
-	}
-
 	if (*size == 0) {
 		RTE_LOG(ERR, EAL, "Cannot get a virtual area of any size: %s\n",
 			rte_strerror(rte_errno));
@@ -195,17 +188,6 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 	} else if (next_baseaddr != NULL) {
 		next_baseaddr = RTE_PTR_ADD(aligned_addr, *size);
 	}
-	if (cheri_gettag(aligned_addr) != 1)
-	{
-		printf("aligned_addr1 has no tag \n");
-	}
-	else
-	{
-		printf("aligned_addr1 has tag \n");
-	}
-	RTE_LOG(ERR, EAL, "Virtual area found at %p (size = 0x%zx)\n",
-		aligned_addr, *size);
-
 	if (unmap) {
 		RTE_LOG(ERR, EAL, "eal_mem_free\n");
 		eal_mem_free(mapped_addr, map_sz);
@@ -241,15 +223,6 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 	}
 	RTE_LOG(ERR, EAL, "Virtual Aligned address is %p (size = 0x%zx)\n",
 		aligned_addr, *size);
-	if (cheri_gettag(aligned_addr) != 1)
-
-	{
-		printf("aligned_addr has no tag \n");
-	}
-	else
-	{
-		printf("aligned_addr has tag \n");
-	}
 	return aligned_addr;
 }
 
@@ -281,7 +254,6 @@ eal_memseg_list_init(struct rte_memseg_list *msl, uint64_t page_sz,
 		int n_segs, int socket_id, int type_msl_idx, bool heap)
 {
 	char name[RTE_FBARRAY_NAME_LEN];
-
 	snprintf(name, sizeof(name), MEMSEG_LIST_FMT, page_sz >> 10, socket_id,
 		 type_msl_idx);
 
@@ -294,7 +266,7 @@ eal_memseg_list_alloc(struct rte_memseg_list *msl, int reserve_flags)
 {
 	size_t page_sz, mem_sz;
 	void *addr;
-
+	RTE_LOG(ERR, EAL, "In eal memseg list alloc\n");
 	page_sz = msl->page_sz;
 	mem_sz = page_sz * msl->memseg_arr.len;
 
@@ -328,7 +300,7 @@ eal_memseg_list_populate(struct rte_memseg_list *msl, void *addr, int n_segs)
 {
 	size_t page_sz = msl->page_sz;
 	int i;
-
+	RTE_LOG(ERR, EAL, "In eal memseg list populate\n");
 	for (i = 0; i < n_segs; i++) {
 		struct rte_fbarray *arr = &msl->memseg_arr;
 		struct rte_memseg *ms = rte_fbarray_get(arr, i);
@@ -354,7 +326,7 @@ virt2memseg(const void *addr, const struct rte_memseg_list *msl)
 	const struct rte_fbarray *arr;
 	void *start, *end;
 	int ms_idx;
-
+	RTE_LOG(ERR, EAL, "In virt2memseg\n");
 	if (msl == NULL)
 		return NULL;
 
@@ -377,7 +349,7 @@ virt2memseg_list(const void *addr)
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	struct rte_memseg_list *msl;
 	int msl_idx;
-
+	RTE_LOG(ERR, EAL, "In virt2memseg list\n");
 	for (msl_idx = 0; msl_idx < RTE_MAX_MEMSEG_LISTS; msl_idx++) {
 		void *start, *end;
 		msl = &mcfg->memsegs[msl_idx];
@@ -408,6 +380,7 @@ find_virt(const struct rte_memseg_list *msl __rte_unused,
 		const struct rte_memseg *ms, void *arg)
 {
 	struct virtiova *vi = arg;
+	RTE_LOG(ERR, EAL, "In find virt \n");
 	if (vi->iova >= ms->iova && vi->iova < (ms->iova + ms->len)) {
 		size_t offset = vi->iova - ms->iova;
 		vi->virt = RTE_PTR_ADD(ms->addr, offset);
@@ -421,6 +394,7 @@ find_virt_legacy(const struct rte_memseg_list *msl __rte_unused,
 		const struct rte_memseg *ms, size_t len, void *arg)
 {
 	struct virtiova *vi = arg;
+	RTE_LOG(ERR, EAL, "In find virt legacy\n");
 	if (vi->iova >= ms->iova && vi->iova < (ms->iova + len)) {
 		size_t offset = vi->iova - ms->iova;
 		vi->virt = RTE_PTR_ADD(ms->addr, offset);
@@ -436,7 +410,7 @@ rte_mem_iova2virt(rte_iova_t iova)
 	struct virtiova vi;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-
+	RTE_LOG(ERR, EAL, "In rte mem iovan");
 	memset(&vi, 0, sizeof(vi));
 
 	vi.iova = iova;
@@ -489,7 +463,7 @@ dump_memseg(const struct rte_memseg_list *msl, const struct rte_memseg *ms,
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	int msl_idx, ms_idx, fd;
 	FILE *f = arg;
-
+	RTE_LOG(ERR, EAL, "In dump memseg\n");
 	msl_idx = msl - mcfg->memsegs;
 	if (msl_idx < 0 || msl_idx >= RTE_MAX_MEMSEG_LISTS)
 		return -1;
@@ -596,7 +570,7 @@ check_iova(const struct rte_memseg_list *msl __rte_unused,
 {
 	uint64_t *mask = arg;
 	rte_iova_t iova;
-
+	RTE_LOG(ERR, EAL, "In check iova\n");
 	/* higher address within segment */
 	iova = (ms->iova + ms->len) - 1;
 	if (!(iova & *mask))
@@ -618,7 +592,7 @@ check_dma_mask(uint8_t maskbits, bool thread_unsafe)
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	uint64_t mask;
 	int ret;
-
+	RTE_LOG(ERR, EAL, "In check dma mask\n");
 	/* Sanity check. We only check width can be managed with 64 bits
 	 * variables. Indeed any higher value is likely wrong. */
 	if (maskbits > MAX_DMA_MASK_BITS) {
@@ -725,11 +699,12 @@ rte_memseg_contig_walk_thread_unsafe(rte_memseg_contig_walk_t func, void *arg)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	int i, ms_idx, ret = 0;
-
+	RTE_LOG(ERR, EAL, "In rte memseg contig walk thread unsafe\n");
 	for (i = 0; i < RTE_MAX_MEMSEG_LISTS; i++) {
 		struct rte_memseg_list *msl = &mcfg->memsegs[i];
 		const struct rte_memseg *ms;
-		struct rte_fbarray *arr;
+		struct rte_fbarray * __capability arr;
+		//struct rte_fbarray * arr;
 
 		if (msl->memseg_arr.count == 0)
 			continue;
@@ -748,15 +723,6 @@ rte_memseg_contig_walk_thread_unsafe(rte_memseg_contig_walk_t func, void *arg)
 			 */
 			n_segs = rte_fbarray_find_contig_used(arr, ms_idx);
 			len = n_segs * msl->page_sz;
-			if (cheri_gettag(func) != 1)
-			{
-				printf("func has no tag \n");
-			}
-			else
-			{
-				printf("func has tag \n");
-			}
-
 			if (cheri_gettag(msl) != 1)
 			{
 				printf("msl has no tag \n");
@@ -765,22 +731,16 @@ rte_memseg_contig_walk_thread_unsafe(rte_memseg_contig_walk_t func, void *arg)
 			{
 				printf("msl has tag \n");
 			}
-			if (cheri_gettag(ms) != 1)
+
+			if (cheri_gettag(ms->addr) != 1)
 			{
-				printf("ms has no tag \n");
+				printf("ms Addr has no tag \n");
 			}
 			else
 			{
-				printf("ms has tag \n");
+				printf("ms Addr has tag \n");
 			}
-			if (cheri_gettag(arg) != 1)
-			{
-				printf("arg has no tag \n");
-			}
-			else
-			{
-				printf("arg has tag \n");
-			}
+
 
 			ret = func(msl, ms, len, arg);
 			if (ret)
@@ -793,9 +753,10 @@ rte_memseg_contig_walk_thread_unsafe(rte_memseg_contig_walk_t func, void *arg)
 }
 
 int
-rte_memseg_contig_walk(rte_memseg_contig_walk_t func, void *arg)
+rte_memseg_contig_walk(rte_memseg_contig_walk_t func, void *arg __rte_unused)
 {
 	int ret = 0;
+	RTE_LOG(ERR, EAL, "In rte memseg contig walk\n");
 	if (cheri_gettag(func) != 1)
 	{
 		printf("func 1 has no tag \n");
@@ -804,18 +765,9 @@ rte_memseg_contig_walk(rte_memseg_contig_walk_t func, void *arg)
 	{
 		printf("func 1 has tag \n");
 	}
-	if (cheri_gettag(arg) != 1)
-	{
-		printf("arg1 has no tag \n");
-	}
-	else
-	{
-		printf("arg1 has tag \n");
-	}
-
 	/* do not allow allocations/frees/init while we iterate */
 	rte_mcfg_mem_read_lock();
-	ret = rte_memseg_contig_walk_thread_unsafe(func, arg);
+	ret = rte_memseg_contig_walk_thread_unsafe(func,NULL);
 	rte_mcfg_mem_read_unlock();
 
 	return ret;
@@ -826,7 +778,7 @@ rte_memseg_walk_thread_unsafe(rte_memseg_walk_t func, void *arg)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	int i, ms_idx, ret = 0;
-
+	RTE_LOG(ERR, EAL, "in rte memseg Thread unsafe\n");
 	for (i = 0; i < RTE_MAX_MEMSEG_LISTS; i++) {
 		struct rte_memseg_list *msl = &mcfg->memsegs[i];
 		const struct rte_memseg *ms;
@@ -840,6 +792,14 @@ rte_memseg_walk_thread_unsafe(rte_memseg_walk_t func, void *arg)
 		ms_idx = rte_fbarray_find_next_used(arr, 0);
 		while (ms_idx >= 0) {
 			ms = rte_fbarray_get(arr, ms_idx);
+			if (cheri_gettag(ms) != 1)
+			{
+				printf("ms3 has no tag \n");
+			}
+			else
+			{
+				printf("ms3 has tag \n");
+			}
 			ret = func(msl, ms, arg);
 			if (ret)
 				return ret;
@@ -853,7 +813,7 @@ int
 rte_memseg_walk(rte_memseg_walk_t func, void *arg)
 {
 	int ret = 0;
-
+	RTE_LOG(ERR, EAL, "in rte memseg walk\n");
 	/* do not allow allocations/frees/init while we iterate */
 	rte_mcfg_mem_read_lock();
 	ret = rte_memseg_walk_thread_unsafe(func, arg);
@@ -867,7 +827,7 @@ rte_memseg_list_walk_thread_unsafe(rte_memseg_list_walk_t func, void *arg)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	int i, ret = 0;
-
+	RTE_LOG(ERR, EAL, "In rte memseg list walk thread unsafe\n");
 	for (i = 0; i < RTE_MAX_MEMSEG_LISTS; i++) {
 		struct rte_memseg_list *msl = &mcfg->memsegs[i];
 
@@ -885,7 +845,7 @@ int
 rte_memseg_list_walk(rte_memseg_list_walk_t func, void *arg)
 {
 	int ret = 0;
-
+	RTE_LOG(ERR, EAL, "In rte memseg list walk\n");
 	/* do not allow allocations/frees/init while we iterate */
 	rte_mcfg_mem_read_lock();
 	ret = rte_memseg_list_walk_thread_unsafe(func, arg);
@@ -901,7 +861,7 @@ rte_memseg_get_fd_thread_unsafe(const struct rte_memseg *ms)
 	struct rte_memseg_list *msl;
 	struct rte_fbarray *arr;
 	int msl_idx, seg_idx, ret;
-
+	RTE_LOG(ERR, EAL, "In rte memseg get fd thread unsafe\n");
 	if (ms == NULL) {
 		rte_errno = EINVAL;
 		return -1;
@@ -940,7 +900,7 @@ int
 rte_memseg_get_fd(const struct rte_memseg *ms)
 {
 	int ret;
-
+	RTE_LOG(ERR, EAL, "In rte memseg get fd\n");
 	rte_mcfg_mem_read_lock();
 	ret = rte_memseg_get_fd_thread_unsafe(ms);
 	rte_mcfg_mem_read_unlock();
@@ -956,7 +916,7 @@ rte_memseg_get_fd_offset_thread_unsafe(const struct rte_memseg *ms,
 	struct rte_memseg_list *msl;
 	struct rte_fbarray *arr;
 	int msl_idx, seg_idx, ret;
-
+	RTE_LOG(ERR, EAL, "In rte memseg get fd offset thread unsafe\n");
 	if (ms == NULL || offset == NULL) {
 		rte_errno = EINVAL;
 		return -1;
@@ -1010,7 +970,7 @@ rte_extmem_register(void *va_addr, size_t len, rte_iova_t iova_addrs[],
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	unsigned int socket_id, n;
 	int ret = 0;
-
+	RTE_LOG(ERR, EAL, "In rte extmem register\n");
 	if (va_addr == NULL || page_sz == 0 || len == 0 ||
 			!rte_is_power_of_2(page_sz) ||
 			RTE_ALIGN(len, page_sz) != len ||
@@ -1083,7 +1043,7 @@ sync_memory(void *va_addr, size_t len, bool attach)
 {
 	struct rte_memseg_list *msl;
 	int ret = 0;
-
+	RTE_LOG(ERR, EAL, "In sync memory\n");
 	if (va_addr == NULL || len == 0) {
 		rte_errno = EINVAL;
 		return -1;
@@ -1126,7 +1086,6 @@ rte_eal_memory_init(void)
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-
 	int retval;
 	RTE_LOG(DEBUG, EAL, "Setting up physically contiguous memory...\n");
 

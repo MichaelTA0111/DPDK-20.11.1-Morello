@@ -34,6 +34,39 @@
 
 #include "rte_mempool.h"
 #include "rte_mempool_trace.h"
+#include <cheri/cheri.h>
+#include <cheri/cheric.h>
+
+#if __has_feature(capabilities)
+	static inline void *__capability cheri_ptr_add(void *__capability ptr, unsigned long x)
+	{
+		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
+		if (cheri_gettag(ptr) != 1){
+			//RTE_LOG(ERR, EAL, "No tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+		else {
+			assert(cheri_gettag(new_addr) != 1);
+			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+	}
+	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
+	static inline void *__capability cheri_ptr_sub(void *__capability ptr, unsigned long x)
+	{
+		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
+		if (cheri_gettag(ptr) != 1){
+			//RTE_LOG(ERR, EAL, "No tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+		else {
+			assert(cheri_gettag(new_addr) != 1);
+			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+	}
+	#define RTE_PTR_SUB(ptr, x) cheri_ptr_sub(ptr, x)
+#endif
 
 TAILQ_HEAD(rte_mempool_list, rte_tailq_entry);
 
@@ -372,7 +405,7 @@ static rte_iova_t
 get_iova(void *addr)
 {
 	struct rte_memseg *ms;
-
+	RTE_LOG(INFO, EAL, "In get_iova\n");
 	/* try registered memory first */
 	ms = rte_mem_virt2memseg(addr, NULL);
 	if (ms == NULL || ms->iova == RTE_BAD_IOVA)

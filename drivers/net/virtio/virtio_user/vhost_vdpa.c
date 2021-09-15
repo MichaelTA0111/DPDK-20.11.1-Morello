@@ -227,7 +227,7 @@ vhost_vdpa_map_contig(const struct rte_memseg_list *msl,
 		const struct rte_memseg *ms, size_t len, void *arg)
 {
 	struct virtio_user_dev *dev = arg;
-
+	RTE_LOG(ERR, EAL, "vhost vdpa map contig\n");
 	if (msl->external)
 		return 0;
 
@@ -239,7 +239,7 @@ vhost_vdpa_map(const struct rte_memseg_list *msl, const struct rte_memseg *ms,
 		void *arg)
 {
 	struct virtio_user_dev *dev = arg;
-
+	RTE_LOG(ERR, EAL, "In vhost vdpa map\n");
 	/* skip external memory that isn't a heap */
 	if (msl->external && !msl->heap)
 		return 0;

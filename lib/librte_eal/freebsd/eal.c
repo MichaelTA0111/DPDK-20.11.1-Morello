@@ -241,19 +241,14 @@ rte_eal_config_create(void)
 		mem_cfg_fd = -1;
 		return -1;
 	}
-	RTE_LOG(ERR, EAL, "Setting rte_mem_cfg_addr %p in virtual area (size = 0x%zx) \n",
-		rte_mem_cfg_addr, cfg_len_aligned);
-//#define PAGE_SSIZE (2*1024)
-	size_t test_size = 0x10000;
-
 	/* remap the actual file into the space we've just reserved */
-/*	#if __has_feature(capabilities)
+	/*#if __has_feature(capabilities)
 		//mapped_mem_cfg_addr = mmap(NULL,PAGE_SSIZE, PROT_READ | PROT_WRITE,
 		//	MAP_ANON | MAP_ALIGNED_CHERI, mem_cfg_fd, 0);
 
-	    	mapped_mem_cfg_addr = mmap(rte_mem_cfg_addr,
+	    	mapped_mem_cfg_addr = mmap(NULL,
 			cfg_len_aligned, PROT_READ | PROT_WRITE,
-			MAP_SHARED | MAP_ALIGNED_CHERI, mem_cfg_fd, 0);
+			MAP_SHARED | MAP_FIXED | MAP_CHERI_NOSETBOUNDS, mem_cfg_fd, 0);
 		RTE_LOG(ERR, EAL, " capability mapped_mem_cfg_addr %p (size = 0x%zx)  \n\n",
 		mapped_mem_cfg_addr, test_size);
 		if (cheri_gettag(rte_mem_cfg_addr) != 1)
@@ -279,10 +274,8 @@ rte_eal_config_create(void)
 		mem_cfg_fd = -1;
 		return -1;
 	}*/
-	RTE_LOG(ERR, EAL, "Reading rte_mem_cfg_addr %p (size of rte_mem_config = 0x%zx) \n",
-		rte_mem_cfg_addr,sizeof(struct rte_mem_config));
 
-	if (cheri_gettag(rte_mem_cfg_addr) != 1)
+	/*if (cheri_gettag(rte_mem_cfg_addr) != 1)
 	{
 		printf("rte_mem_cfg_addr2 has no tag \n");
 	}
@@ -307,17 +300,9 @@ rte_eal_config_create(void)
 	if (permissions & CHERI_PERM_CHERIABI_VMMAP)
 		printf("CHERI_PERM_CHERIABI_VMMAP set in config \n");
 	if (permissions & CHERI_PERM_EXECUTE)
-		printf("CHERI_PERM_CHERIABI set in config \n");
+		printf("CHERI_PERM_CHERIABI set in config \n");*/
 	memcpy(rte_mem_cfg_addr, config->mem_config, sizeof(struct rte_mem_config));
 	config->mem_config = rte_mem_cfg_addr;
-	if (cheri_gettag(config->mem_config) != 1)
-	{
-		printf("config->mem_config 2has no tag \n");
-	}
-	else
-	{
-		printf("config->mem_config2 has tag \n");
-	}
 
 	/* store address of the config in the config itself so that secondary
 	 * processes could later map the config into this exact location

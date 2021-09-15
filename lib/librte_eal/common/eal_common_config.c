@@ -9,6 +9,42 @@
 #include "eal_private.h"
 #include "eal_memcfg.h"
 
+#include <cheri/cheri.h>
+#include <cheri/cheric.h>
+
+#if __has_feature(capabilities)
+	static inline void *__capability cheri_ptr_add(void *__capability ptr, unsigned long x)
+	{
+		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
+		if (cheri_gettag(ptr) != 1){
+			//RTE_LOG(ERR, EAL, "No tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+		else {
+			assert(cheri_gettag(new_addr) != 1);
+			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+	}
+	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
+	static inline void *__capability cheri_ptr_sub(void *__capability ptr, unsigned long x)
+	{
+		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
+		if (cheri_gettag(ptr) != 1){
+			//RTE_LOG(ERR, EAL, "No tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+		else {
+			assert(cheri_gettag(new_addr) != 1);
+			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+	}
+	#define RTE_PTR_SUB(ptr, x) cheri_ptr_sub(ptr, x)
+#endif
+
+
+
 /* early configuration structure, when memory config is not mmapped */
 static struct rte_mem_config early_mem_config;
 

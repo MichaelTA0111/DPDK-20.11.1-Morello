@@ -26,6 +26,37 @@
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
 
+#if __has_feature(capabilities)
+	static inline void *__capability cheri_ptr_add(void *__capability ptr, unsigned long x)
+	{
+		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
+		if (cheri_gettag(ptr) != 1){
+			//RTE_LOG(ERR, EAL, "No tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+		else {
+			assert(cheri_gettag(new_addr) != 1);
+			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+	}
+	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
+	static inline void *__capability cheri_ptr_sub(void *__capability ptr, unsigned long x)
+	{
+		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
+		if (cheri_gettag(ptr) != 1){
+			//RTE_LOG(ERR, EAL, "No tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+		else {
+			assert(cheri_gettag(new_addr) != 1);
+			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+	}
+	#define RTE_PTR_SUB(ptr, x) cheri_ptr_sub(ptr, x)
+#endif
+
 /*
  * If debugging is enabled, freed memory is set to poison value
  * to catch buggy programs. Otherwise, freed memory is set to zero
@@ -47,7 +78,7 @@ malloc_elem_find_max_iova_contig(struct malloc_elem *elem, size_t align)
 	size_t page_sz, cur, max;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-
+	RTE_LOG(ERR, EAL, "malloc elem find max iova contig\n");
 	page_sz = (size_t)elem->msl->page_sz;
 	data_start = RTE_PTR_ADD(elem, MALLOC_ELEM_HEADER_LEN);
 	data_end = RTE_PTR_ADD(elem, elem->size - MALLOC_ELEM_TRAILER_LEN);
@@ -133,6 +164,7 @@ malloc_elem_init(struct malloc_elem *elem, struct malloc_heap *heap,
 		struct rte_memseg_list *msl, size_t size,
 		struct malloc_elem *orig_elem, size_t orig_size)
 {
+	/*RTE_LOG(ERR, EAL, "In Malloc elem_init\n");
 	if (cheri_gettag(elem) != 1)
 	{
 		printf("elem has no tag \n");
@@ -141,11 +173,21 @@ malloc_elem_init(struct malloc_elem *elem, struct malloc_heap *heap,
 	{
 		printf("elem has tag \n");
 	}
-	elem->heap = heap;
-	elem->msl = msl;
+
+	if (cheri_gettag(heap) != 1)
+	{
+		printf("heap 3 has no tag \n");
+	}
+	else
+	{
+		printf("heap 3 has tag \n");
+	}*/
+
 	elem->prev = NULL;
 	elem->next = NULL;
 	memset(&elem->free_list, 0, sizeof(elem->free_list));
+	elem->heap = heap;
+	elem->msl = msl;
 	elem->state = ELEM_FREE;
 	elem->size = size;
 	elem->pad = 0;

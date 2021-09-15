@@ -231,7 +231,7 @@ eal_dynmem_hugepage_init(void)
 	int hp_sz_idx, socket_id;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-
+	RTE_LOG(ERR, EAL, "eal dynmem hughepages\n");
 	memset(used_hp, 0, sizeof(used_hp));
 
 	for (hp_sz_idx = 0;

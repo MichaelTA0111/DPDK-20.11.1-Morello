@@ -1336,7 +1336,7 @@ mark_freeable(const struct rte_memseg_list *msl, const struct rte_memseg *ms,
 {
 	/* ms is const, so find this memseg */
 	struct rte_memseg *found;
-
+	RTE_LOG(INFO, EAL, "In mark freeable\n");
 	if (msl->external)
 		return 0;
 

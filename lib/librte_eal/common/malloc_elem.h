@@ -36,7 +36,7 @@ struct malloc_elem {
 	uint64_t header_cookie;         /* Cookie marking start of data */
 	                                /* trailer cookie at start + size */
 #endif
-} __rte_cache_aligned;
+}__rte_cache_aligned;
 
 #ifndef RTE_MALLOC_DEBUG
 static const unsigned MALLOC_ELEM_TRAILER_LEN = 0;

@@ -34,6 +34,37 @@
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
 
+#if __has_feature(capabilities)
+	static inline void *__capability cheri_ptr_add(void *__capability ptr, unsigned long x)
+	{
+		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
+		if (cheri_gettag(ptr) != 1){
+			//RTE_LOG(ERR, EAL, "No tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+		else {
+			assert(cheri_gettag(new_addr) != 1);
+			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+	}
+	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
+	static inline void *__capability cheri_ptr_sub(void *__capability ptr, unsigned long x)
+	{
+		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
+		if (cheri_gettag(ptr) != 1){
+			//RTE_LOG(ERR, EAL, "No tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+		else {
+			assert(cheri_gettag(new_addr) != 1);
+			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+	}
+	#define RTE_PTR_SUB(ptr, x) cheri_ptr_sub(ptr, x)
+#endif
+
 /* start external socket ID's at a very high number */
 #define CONST_MAX(a, b) (a > b ? a : b) /* RTE_MAX is not a constant */
 #define EXTERNAL_HEAP_MIN_SOCKET_ID (CONST_MAX((1 << 8), RTE_MAX_NUMA_NODES))
@@ -42,7 +73,7 @@ static unsigned
 check_hugepage_sz(unsigned flags, uint64_t hugepage_sz)
 {
 	unsigned check_flag = 0;
-
+	RTE_LOG(ERR, EAL, "Check_hugepage_sz\n");
 	if (!(flags & ~RTE_MEMZONE_SIZE_HINT_ONLY))
 		return 1;
 
@@ -80,6 +111,7 @@ malloc_socket_to_heap_id(unsigned int socket_id)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	int i;
+	RTE_LOG(ERR, EAL, "Malloc_socket_to_heap_id\n");
 
 	for (i = 0; i < RTE_MAX_HEAPS; i++) {
 		struct malloc_heap *heap = &mcfg->malloc_heaps[i];
@@ -97,8 +129,9 @@ static struct malloc_elem *
 malloc_heap_add_memory(struct malloc_heap *heap, struct rte_memseg_list *msl,
 		void *start, size_t len)
 {
+	//RTE_LOG(ERR, EAL, "In Malloc heap add memory\n");
 	struct malloc_elem *elem = start;
-	if (cheri_gettag(start) != 1)
+	/*if (cheri_gettag(start) != 1)
 	{
 		printf("start has no tag \n");
 	}
@@ -130,7 +163,7 @@ malloc_heap_add_memory(struct malloc_heap *heap, struct rte_memseg_list *msl,
 	else
 	{
 		printf("msl has tag \n");
-	}
+	}*/
 	if (cheri_gettag(elem) != 1)
 	{
 		printf("elem has no tag \n");
@@ -158,7 +191,7 @@ malloc_add_seg(const struct rte_memseg_list *msl,
 	struct rte_memseg_list *found_msl;
 	struct malloc_heap *heap;
 	int msl_idx, heap_idx;
-
+	RTE_LOG(ERR, EAL, " In Malloc add seg\n");
 	if (msl->external)
 		return 0;
 
@@ -176,23 +209,7 @@ malloc_add_seg(const struct rte_memseg_list *msl,
 		return -1;
 
 	found_msl = &mcfg->memsegs[msl_idx];
-	if (cheri_gettag(heap) != 1)
-	{
-		printf("heap2 has no tag \n");
-	}
-	else
-	{
-		printf("heap2 has tag \n");
-	}
 
-	if (cheri_gettag(found_msl) != 1)
-	{
-		printf("found_msl has no tag \n");
-	}
-	else
-	{
-		printf("found_msl has tag \n");
-	}
 	if (cheri_gettag(ms->addr) != 1)
 	{
 		printf("ms->addr has no tag \n");
@@ -201,6 +218,16 @@ malloc_add_seg(const struct rte_memseg_list *msl,
 	{
 		printf("ms->addr has tag \n");
 	}
+/*	void* addrp;
+	addrp = cheri_andperm(ms->addr,~CHERI_PERM_CHERIABI_VMMAP);
+	if (cheri_gettag(addrp) != 1)
+	{
+		printf("addrp has no tag \n");
+	}
+	else
+	{
+		printf("addrp has tag \n");
+	}*/
 	malloc_heap_add_memory(heap, found_msl, ms->addr, len);
 
 	heap->total_size += len;
@@ -222,7 +249,7 @@ find_suitable_element(struct malloc_heap *heap, size_t size,
 {
 	size_t idx;
 	struct malloc_elem *elem, *alt_elem = NULL;
-
+	RTE_LOG(ERR, EAL, "Find suitable_element\n");
 	for (idx = malloc_elem_free_list_index(size);
 			idx < RTE_HEAP_NUM_FREELISTS; idx++) {
 		for (elem = LIST_FIRST(&heap->free_head[idx]);
@@ -256,7 +283,7 @@ find_biggest_element(struct malloc_heap *heap, size_t *size,
 {
 	struct malloc_elem *elem, *max_elem = NULL;
 	size_t idx, max_size = 0;
-
+	RTE_LOG(ERR, EAL, "find biggest element\n");
 	for (idx = 0; idx < RTE_HEAP_NUM_FREELISTS; idx++) {
 		for (elem = LIST_FIRST(&heap->free_head[idx]);
 				!!elem; elem = LIST_NEXT(elem, free_list)) {
@@ -272,8 +299,10 @@ find_biggest_element(struct malloc_heap *heap, size_t *size,
 			} else {
 				void *data_start = RTE_PTR_ADD(elem,
 						MALLOC_ELEM_HEADER_LEN);
+						//assert(cheri_gettag(data_start) != 1);
 				void *data_end = RTE_PTR_ADD(elem, elem->size -
 						MALLOC_ELEM_TRAILER_LEN);
+						//assert(cheri_gettag(data_end) != 1);
 				void *aligned = RTE_PTR_ALIGN_CEIL(data_start,
 						align);
 				/* check if aligned data start is beyond end */
@@ -306,7 +335,7 @@ heap_alloc(struct malloc_heap *heap, const char *type __rte_unused, size_t size,
 
 	size = RTE_CACHE_LINE_ROUNDUP(size);
 	align = RTE_CACHE_LINE_ROUNDUP(align);
-
+	RTE_LOG(ERR, EAL, "Heap _alloc\n");
 	/* roundup might cause an overflow */
 	if (size == 0)
 		return NULL;
@@ -327,7 +356,7 @@ heap_alloc_biggest(struct malloc_heap *heap, const char *type __rte_unused,
 {
 	struct malloc_elem *elem;
 	size_t size;
-
+	RTE_LOG(ERR, EAL, "heap alloc biggest\n");
 	align = RTE_CACHE_LINE_ROUNDUP(align);
 
 	elem = find_biggest_element(heap, &size, flags, align, contig);
@@ -346,6 +375,7 @@ void
 rollback_expand_heap(struct rte_memseg **ms, int n_segs,
 		struct malloc_elem *elem, void *map_addr, size_t map_len)
 {
+	RTE_LOG(ERR, EAL, "roll back expand heap\n");
 	if (elem != NULL) {
 		malloc_elem_free_list_remove(elem);
 		malloc_elem_hide_region(elem, map_addr, map_len);
@@ -366,6 +396,7 @@ alloc_pages_on_heap(struct malloc_heap *heap, uint64_t pg_sz, size_t elt_size,
 	size_t alloc_sz;
 	int allocd_pages;
 	void *ret, *map_addr;
+	RTE_LOG(ERR, EAL, "alloc page on heap\n");
 
 	alloc_sz = (size_t)pg_sz * n_segs;
 
@@ -465,7 +496,7 @@ try_expand_heap_primary(struct malloc_heap *heap, uint64_t pg_sz,
 	alloc_sz = RTE_ALIGN_CEIL(align + elt_size +
 			MALLOC_ELEM_TRAILER_LEN, pg_sz);
 	n_segs = alloc_sz / pg_sz;
-
+	RTE_LOG(ERR, EAL, "try expand heap primary\n");
 	/* we can't know in advance how many pages we'll need, so we malloc */
 	ms = malloc(sizeof(*ms) * n_segs);
 	if (ms == NULL)
@@ -528,7 +559,7 @@ try_expand_heap_secondary(struct malloc_heap *heap, uint64_t pg_sz,
 {
 	struct malloc_mp_req req;
 	int req_result;
-
+	RTE_LOG(ERR, EAL, "try expand heap secondary\n");
 	memset(&req, 0, sizeof(req));
 
 	req.t = REQ_TYPE_ALLOC;
@@ -558,7 +589,7 @@ try_expand_heap(struct malloc_heap *heap, uint64_t pg_sz, size_t elt_size,
 		bool contig)
 {
 	int ret;
-
+	RTE_LOG(ERR, EAL, "try expand heap\n");
 	rte_mcfg_mem_write_lock();
 
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
@@ -582,7 +613,7 @@ compare_pagesz(const void *a, const void *b)
 	const struct rte_memseg_list *mslb = *mpb;
 	uint64_t pg_sz_a = msla->page_sz;
 	uint64_t pg_sz_b = mslb->page_sz;
-
+	RTE_LOG(ERR, EAL, "Compare pagesz\n");
 	if (pg_sz_a < pg_sz_b)
 		return -1;
 	if (pg_sz_a > pg_sz_b)
@@ -604,7 +635,7 @@ alloc_more_mem_on_socket(struct malloc_heap *heap, size_t size, int socket,
 	bool size_hint = (flags & RTE_MEMZONE_SIZE_HINT_ONLY) > 0;
 	unsigned int size_flags = flags & ~RTE_MEMZONE_SIZE_HINT_ONLY;
 	void *ret;
-
+	RTE_LOG(ERR, EAL, "alloc more mem on socket\n");
 	memset(requested_msls, 0, sizeof(requested_msls));
 	memset(other_msls, 0, sizeof(other_msls));
 	memset(requested_pg_sz, 0, sizeof(requested_pg_sz));
@@ -710,7 +741,7 @@ malloc_heap_alloc_on_heap_id(const char *type, size_t size,
 	void *ret;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-
+	RTE_LOG(ERR, EAL, "malloc heap allocon heap id\n");
 	rte_spinlock_lock(&(heap->lock));
 
 	align = align == 0 ? 1 : align;
@@ -765,7 +796,7 @@ malloc_heap_alloc(const char *type, size_t size, int socket_arg,
 {
 	int socket, heap_id, i;
 	void *ret;
-
+	RTE_LOG(ERR, EAL, "Malloc heap alloc\n");
 	/* return NULL if size is 0 or alignment is not power-of-2 */
 	if (size == 0 || (align && !rte_is_power_of_2(align)))
 		return NULL;
@@ -810,7 +841,7 @@ heap_alloc_biggest_on_heap_id(const char *type, unsigned int heap_id,
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	struct malloc_heap *heap = &mcfg->malloc_heaps[heap_id];
 	void *ret;
-
+	RTE_LOG(ERR, EAL, "heap alloc biggest on heap id\n");
 	rte_spinlock_lock(&(heap->lock));
 
 	align = align == 0 ? 1 : align;
@@ -828,7 +859,7 @@ malloc_heap_alloc_biggest(const char *type, int socket_arg, unsigned int flags,
 {
 	int socket, i, cur_socket, heap_id;
 	void *ret;
-
+	RTE_LOG(ERR, EAL, "malloc heap alloc biggest\n");
 	/* return NULL if align is not power-of-2 */
 	if ((align && !rte_is_power_of_2(align)))
 		return NULL;
@@ -872,7 +903,7 @@ malloc_heap_free_pages(void *aligned_start, size_t aligned_len)
 	int n_segs, seg_idx, max_seg_idx;
 	struct rte_memseg_list *msl;
 	size_t page_sz;
-
+	RTE_LOG(ERR, EAL, "malloc heap free pages\n");
 	msl = rte_mem_virt2memseg_list(aligned_start);
 	if (msl == NULL)
 		return -1;
@@ -902,7 +933,7 @@ malloc_heap_free(struct malloc_elem *elem)
 	int ret;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-
+	RTE_LOG(ERR, EAL, "malloc heap free\n");
 	if (!malloc_elem_cookies_ok(elem) || elem->state != ELEM_BUSY)
 		return -1;
 
@@ -943,6 +974,7 @@ malloc_heap_free(struct malloc_elem *elem)
 	len = elem->size;
 	aligned_start = RTE_PTR_ALIGN_CEIL(start, page_sz);
 	end = RTE_PTR_ADD(elem, len);
+	//assert(cheri_gettag(end) != 1);
 	aligned_end = RTE_PTR_ALIGN_FLOOR(end, page_sz);
 
 	aligned_len = RTE_PTR_DIFF(aligned_end, aligned_start);
@@ -962,6 +994,7 @@ malloc_heap_free(struct malloc_elem *elem)
 		if (tmp->flags & RTE_MEMSEG_FLAG_DO_NOT_FREE) {
 			/* this is an unfreeable segment, so move start */
 			aligned_start = RTE_PTR_ADD(tmp->addr, tmp->len);
+			//assert(cheri_gettag(aligned_start) != 1);
 		}
 	}
 
@@ -990,6 +1023,7 @@ malloc_heap_free(struct malloc_elem *elem)
 
 		/* move start */
 		aligned_start = RTE_PTR_ADD(aligned_start, page_sz);
+		//assert(cheri_gettag(aligned_start) != 1);
 		aligned_len -= page_sz;
 		n_segs--;
 	}
@@ -1077,7 +1111,7 @@ malloc_heap_resize(struct malloc_elem *elem, size_t size)
 
 	if (!malloc_elem_cookies_ok(elem) || elem->state != ELEM_BUSY)
 		return -1;
-
+	RTE_LOG(ERR, EAL, "malloc heap resize\n");
 	rte_spinlock_lock(&(elem->heap->lock));
 
 	ret = malloc_elem_resize(elem, size);
@@ -1096,7 +1130,7 @@ malloc_heap_get_stats(struct malloc_heap *heap,
 {
 	size_t idx;
 	struct malloc_elem *elem;
-
+	RTE_LOG(ERR, EAL, "malloc heap get stats\n");
 	rte_spinlock_lock(&heap->lock);
 
 	/* Initialise variables for heap */
@@ -1132,7 +1166,7 @@ void
 malloc_heap_dump(struct malloc_heap *heap, FILE *f)
 {
 	struct malloc_elem *elem;
-
+	RTE_LOG(ERR, EAL, "malloc heap dump\n");
 	rte_spinlock_lock(&heap->lock);
 
 	fprintf(f, "Heap size: 0x%zx\n", heap->total_size);
@@ -1154,7 +1188,7 @@ destroy_elem(struct malloc_elem *elem, size_t len)
 
 	/* notify all subscribers that a memory area is going to be removed */
 	eal_memalloc_mem_event_notify(RTE_MEM_EVENT_FREE, elem, len);
-
+	RTE_LOG(ERR, EAL, "Destroy elem\n");
 	/* this element can be removed */
 	malloc_elem_free_list_remove(elem);
 	malloc_elem_hide_region(elem, elem, len);
@@ -1177,6 +1211,7 @@ malloc_heap_create_external_seg(void *va_addr, rte_iova_t iova_addrs[],
 	struct rte_fbarray *arr;
 	size_t seg_len = n_pages * page_sz;
 	unsigned int i;
+	RTE_LOG(ERR, EAL, "in malloc_heap_create_external_seg\n");
 
 	/* first, find a free memseg list */
 	for (i = 0; i < RTE_MAX_MEMSEG_LISTS; i++) {
@@ -1210,6 +1245,7 @@ malloc_heap_create_external_seg(void *va_addr, rte_iova_t iova_addrs[],
 		rte_fbarray_set_used(arr, i);
 		ms = rte_fbarray_get(arr, i);
 		ms->addr = RTE_PTR_ADD(va_addr, i * page_sz);
+		//assert(cheri_gettag(ms->addr) != 1);
 		ms->iova = iova_addrs == NULL ? RTE_BAD_IOVA : iova_addrs[i];
 		ms->hugepage_sz = page_sz;
 		ms->len = page_sz;
@@ -1240,7 +1276,7 @@ extseg_walk(const struct rte_memseg_list *msl, void *arg)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	struct extseg_walk_arg *wa = arg;
-
+	RTE_LOG(ERR, EAL, "extseg walk\n");
 	if (msl->base_va == wa->va_addr && msl->len == wa->len) {
 		unsigned int found_idx;
 
@@ -1257,7 +1293,7 @@ malloc_heap_find_external_seg(void *va_addr, size_t len)
 {
 	struct extseg_walk_arg wa;
 	int res;
-
+	RTE_LOG(ERR, EAL, "malloc heap find external seg\n");
 	wa.va_addr = va_addr;
 	wa.len = len;
 
@@ -1278,7 +1314,7 @@ malloc_heap_destroy_external_seg(struct rte_memseg_list *msl)
 	/* destroy the fbarray backing this memory */
 	if (rte_fbarray_destroy(&msl->memseg_arr) < 0)
 		return -1;
-
+	RTE_LOG(ERR, EAL, "malloc heap destroy external seg\n");
 	/* reset the memseg list */
 	memset(msl, 0, sizeof(*msl));
 
@@ -1291,7 +1327,7 @@ malloc_heap_add_external_memory(struct malloc_heap *heap,
 {
 	/* erase contents of new memory */
 	memset(msl->base_va, 0, msl->len);
-
+	RTE_LOG(ERR, EAL, "malloc heao add external memory\n");
 	/* now, add newly minted memory to the malloc heap */
 	malloc_heap_add_memory(heap, msl, msl->base_va, msl->len);
 
@@ -1313,7 +1349,7 @@ malloc_heap_remove_external_memory(struct malloc_heap *heap, void *va_addr,
 		size_t len)
 {
 	struct malloc_elem *elem = heap->first;
-
+	RTE_LOG(ERR, EAL, "malloc heap remove external memory\n");
 	/* find element with specified va address */
 	while (elem != NULL && elem != va_addr) {
 		elem = elem->next;
@@ -1341,7 +1377,7 @@ malloc_heap_create(struct malloc_heap *heap, const char *heap_name)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	uint32_t next_socket_id = mcfg->next_socket_id;
-
+	RTE_LOG(ERR, EAL, "malloc heap create\n");
 	/* prevent overflow. did you really create 2 billion heaps??? */
 	if (next_socket_id > INT32_MAX) {
 		RTE_LOG(ERR, EAL, "Cannot assign new socket ID's\n");
@@ -1369,6 +1405,7 @@ malloc_heap_create(struct malloc_heap *heap, const char *heap_name)
 int
 malloc_heap_destroy(struct malloc_heap *heap)
 {
+	RTE_LOG(ERR, EAL, "malloc heap destroy\n");
 	if (heap->alloc_count != 0) {
 		RTE_LOG(ERR, EAL, "Heap is still in use\n");
 		rte_errno = EBUSY;
@@ -1395,7 +1432,7 @@ rte_eal_malloc_heap_init(void)
 	unsigned int i;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-
+	RTE_LOG(ERR, EAL, "rte eal malloc heap init\n");
 	if (internal_conf->match_allocations)
 		RTE_LOG(DEBUG, EAL, "Hugepages will be freed exactly as allocated.\n");
 

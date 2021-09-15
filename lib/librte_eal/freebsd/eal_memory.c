@@ -23,6 +23,40 @@
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
 
+
+
+#if __has_feature(capabilities)
+	static inline void *__capability cheri_ptr_add(void *__capability ptr, unsigned long x)
+	{
+		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
+		if (cheri_gettag(ptr) != 1){
+			//RTE_LOG(ERR, EAL, "No tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+		else {
+			assert(cheri_gettag(new_addr) != 1);
+			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+	}
+	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
+	static inline void *__capability cheri_ptr_sub(void *__capability ptr, unsigned long x)
+	{
+		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
+		if (cheri_gettag(ptr) != 1){
+			//RTE_LOG(ERR, EAL, "No tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+		else {
+			assert(cheri_gettag(new_addr) != 1);
+			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			return cheri_setaddress(ptr, new_addr);
+		}
+	}
+	#define RTE_PTR_SUB(ptr, x) cheri_ptr_sub(ptr, x)
+#endif
+
+
 #define EAL_PAGE_SIZE (sysconf(_SC_PAGESIZE))
 
 uint64_t eal_get_baseaddr(void)
@@ -58,7 +92,8 @@ rte_eal_hugepage_init(void)
 {
 	struct rte_mem_config *mcfg;
 	uint64_t total_mem = 0;
-	void *addr;
+	void *__capability addr;
+	//void *addr;
 	unsigned int i, j, seg_idx = 0;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
@@ -81,17 +116,34 @@ rte_eal_hugepage_init(void)
 
 		if (eal_memseg_list_init_named(
 				msl, "nohugemem", page_sz, n_segs, 0, true)) {
+				RTE_LOG(ERR, EAL, "eal_memseg_list_init_named return -1\n");
 			return -1;
 		}
+		if (cheri_gettag(addr) != 1)
 
+		{
+			printf("addr5 has no tag \n");
+		}
+		else
+		{
+			printf("addr5 has tag \n");
+		}
 		addr = mmap(NULL, mem_sz, PROT_READ | PROT_WRITE,
 				MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+		if (cheri_gettag(addr) != 1)
+
+		{
+			printf("addr6 has no tag \n");
+		}
+		else
+		{
+			printf("addr6 has tag \n");
+		}
 		if (addr == MAP_FAILED) {
 			RTE_LOG(ERR, EAL, "%s: mmap() failed: %s\n", __func__,
 					strerror(errno));
 			return -1;
 		}
-
 		msl->base_va = addr;
 		msl->len = mem_sz;
 
@@ -186,6 +238,7 @@ rte_eal_hugepage_init(void)
 			addr = RTE_PTR_ADD(msl->base_va,
 					(size_t)msl->page_sz * ms_idx);
 
+
 			/* address is already mapped in memseg list, so using
 			 * MAP_FIXED here is safe.
 			 */
@@ -195,7 +248,7 @@ rte_eal_hugepage_init(void)
 			}
 			else
 			{
-				printf("maddr has tag \n");
+				printf("addr has tag \n");
 			}
 			addr = mmap(addr, page_sz, PROT_READ|PROT_WRITE,
 					MAP_SHARED | MAP_FIXED,
@@ -208,6 +261,15 @@ rte_eal_hugepage_init(void)
 			}
 
 			seg->addr = addr;
+			if (cheri_gettag(addr) != 1)
+			{
+				printf("addrafter map  has no tag \n");
+			}
+			else
+			{
+				printf("addr after map has tag \n");
+			}
+
 			seg->iova = physaddr;
 			seg->hugepage_sz = page_sz;
 			seg->len = page_sz;
@@ -233,6 +295,15 @@ rte_eal_hugepage_init(void)
 				internal_conf->memory >> 20, total_mem >> 20);
 		return -1;
 	}
+	if (cheri_gettag(addr) != 1)
+	{
+		printf("addr7 map  has no tag \n");
+	}
+	else
+	{
+		printf("addr 7 map has tag \n");
+	}
+
 	return 0;
 }
 
@@ -246,7 +317,7 @@ attach_segment(const struct rte_memseg_list *msl, const struct rte_memseg *ms,
 {
 	struct attach_walk_args *wa = arg;
 	void *addr;
-
+	RTE_LOG(ERR, EAL, "attach segment\n");
 	if (msl->external)
 		return 0;
 
