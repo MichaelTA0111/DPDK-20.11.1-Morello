@@ -31,23 +31,40 @@
 #include "eal_private.h"
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
+#include <execinfo.h>
+#define MAX_BACKTRACE 8
+void *stack_add4[MAX_BACKTRACE];
 
+/*Redefine the PTR_ADD function when compiling purecapability code*/
 #if __has_feature(capabilities)
-	static inline void *__capability cheri_ptr_add(void *__capability ptr, unsigned long x)
+	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
 	{
+		int i;
+		//RTE_LOG(ERR, EAL, "Using Add ptr %p\n",ptr);
+	//	size_t res = backtrace(stack_add4, MAX_BACKTRACE);
+	//	for (i = 0; i < res; i++) {
+	//	printf("%d: %p\n", i, stack_add4[i]);
+	//	}
 		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
 		if (cheri_gettag(ptr) != 1){
-			//RTE_LOG(ERR, EAL, "No tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
+			RTE_LOG(ERR, EAL, "No tag on entry\n");
+			abort();
+			void * result;
+			result=cheri_setaddress(ptr, new_addr);
+			//assert(cheri_gettag(result) != 1);
+			return result;
 		}
 		else {
-			assert(cheri_gettag(new_addr) != 1);
+			//assert(cheri_gettag(new_addr) != 1);
 			//RTE_LOG(ERR, EAL, "Tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
+			void * result;
+			result=cheri_setaddress(ptr, new_addr);
+			assert(cheri_gettag(result) != 0);
+			return result;
 		}
 	}
 	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
-	static inline void *__capability cheri_ptr_sub(void *__capability ptr, unsigned long x)
+	static inline void * cheri_ptr_sub(void * ptr, unsigned long x)
 	{
 		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
 		if (cheri_gettag(ptr) != 1){
@@ -56,7 +73,7 @@
 		}
 		else {
 			assert(cheri_gettag(new_addr) != 1);
-			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			////RTE_LOG(ERR, EAL, "Tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 	}
@@ -92,7 +109,6 @@ malloc_socket(const char *type, size_t size, unsigned int align,
 		int socket_arg, const bool trace_ena)
 {
 	void *ptr;
-	RTE_LOG(ERR, EAL, "malloc socket\n");
 	/* return NULL if size is 0 or alignment is not power-of-2 */
 	if (size == 0 || (align && !rte_is_power_of_2(align)))
 		return NULL;
@@ -121,7 +137,6 @@ void *
 rte_malloc_socket(const char *type, size_t size, unsigned int align,
 		int socket_arg)
 {
-	RTE_LOG(ERR, EAL, "RTE Malloc Socket\n");
 	return malloc_socket(type, size, align, socket_arg, true);
 }
 
@@ -396,7 +411,6 @@ rte_malloc_virt2iova(const void *addr)
 {
 	const struct rte_memseg *ms;
 	struct malloc_elem *elem = malloc_elem_from_data(addr);
-	RTE_LOG(ERR, EAL, "In rte malloc virt2iova\n");
 	if (elem == NULL)
 		return RTE_BAD_IOVA;
 
@@ -418,7 +432,6 @@ find_named_heap(const char *name)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	unsigned int i;
-	RTE_LOG(ERR, EAL, "In find named heap\n");
 	for (i = 0; i < RTE_MAX_HEAPS; i++) {
 		struct malloc_heap *heap = &mcfg->malloc_heaps[i];
 
@@ -436,7 +449,6 @@ rte_malloc_heap_memory_add(const char *heap_name, void *va_addr, size_t len,
 	struct rte_memseg_list *msl;
 	unsigned int n;
 	int ret;
-	RTE_LOG(ERR, EAL, "in rte malloc heap memory add\n");
 	if (heap_name == NULL || va_addr == NULL ||
 			page_sz == 0 || !rte_is_power_of_2(page_sz) ||
 			RTE_ALIGN(len, page_sz) != len ||

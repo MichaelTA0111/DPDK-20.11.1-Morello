@@ -73,6 +73,10 @@ extern "C" {
 #define RTE_LOG_INFO     7U  /**< Informational.                    */
 #define RTE_LOG_DEBUG    8U  /**< Debug-level messages.             */
 
+
+#define FOUND printf ("This is line %d of file %s (function %s)\n",\
+                      __LINE__, __FILE__, __func__)
+
 /**
  * Change the stream that will be used by the logging system.
  *

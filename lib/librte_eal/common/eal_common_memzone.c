@@ -298,7 +298,6 @@ rte_memzone_lookup(const char *name)
 {
 	struct rte_mem_config *mcfg;
 	const struct rte_memzone *memzone = NULL;
-	RTE_LOG(ERR, EAL, "In rte memzone lookup\n");
 	mcfg = rte_eal_get_configuration()->mem_config;
 
 	rte_rwlock_read_lock(&mcfg->mlock);
@@ -378,7 +377,6 @@ rte_eal_memzone_init(void)
 	int ret = 0;
 	/* get pointer to global configuration */
 	mcfg = rte_eal_get_configuration()->mem_config;
-
 	rte_rwlock_write_lock(&mcfg->mlock);
 
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY &&
@@ -404,7 +402,6 @@ void rte_memzone_walk(void (*func)(const struct rte_memzone *, void *),
 	struct rte_mem_config *mcfg;
 	struct rte_fbarray *arr;
 	int i;
-	RTE_LOG(ERR, EAL, "In rte memzone walk\n");
 	mcfg = rte_eal_get_configuration()->mem_config;
 	arr = &mcfg->memzones;
 

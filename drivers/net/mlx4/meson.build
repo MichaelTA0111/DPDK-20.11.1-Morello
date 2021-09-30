@@ -128,7 +128,7 @@ if dlopen_ibverbs
 		c_args: cflags,
 		dependencies: libs,
 		link_args: [
-		'-Wl,-export-dynamic',
+		'-Wl,--export-dynamic',
 		'-Wl,-h,@0@'.format(LIB_GLUE),
 		],
 		soversion: dlopen_so_version,

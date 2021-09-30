@@ -23,24 +23,42 @@
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
 
+#include <execinfo.h>
+#define MAX_BACKTRACE 8
+void *stack_add5[MAX_BACKTRACE];
 
-
+#define PYTILIA_IS_TAGGED(_ptr) \
+	printf("%s: %s %p tagged? %s\n", __FUNCTION__, #_ptr, _ptr, cheri_gettag(_ptr) ? "Y" : "N");
+/*Redefine the PTR_ADD function when compiling purecapability code*/
 #if __has_feature(capabilities)
-	static inline void *__capability cheri_ptr_add(void *__capability ptr, unsigned long x)
+	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
 	{
+		int i;
+		//RTE_LOG(ERR, EAL, "Using Add ptr %p\n",ptr);
+	//	size_t res = backtrace(stack_add5, MAX_BACKTRACE);
+	//	for (i = 0; i < res; i++) {
+	//	printf("%d: %p\n", i, stack_add5[i]);
+	//	}
 		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
 		if (cheri_gettag(ptr) != 1){
-			//RTE_LOG(ERR, EAL, "No tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
+			RTE_LOG(ERR, EAL, "No tag on entry\n");
+			abort();
+			void * result;
+			result=cheri_setaddress(ptr, new_addr);
+			//assert(cheri_gettag(result) != 1);
+			return result;
 		}
 		else {
-			assert(cheri_gettag(new_addr) != 1);
+			//assert(cheri_gettag(new_addr) != 1);
 			//RTE_LOG(ERR, EAL, "Tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
+			void * result;
+			result=cheri_setaddress(ptr, new_addr);
+			assert(cheri_gettag(result) != 0);
+			return result;
 		}
 	}
 	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
-	static inline void *__capability cheri_ptr_sub(void *__capability ptr, unsigned long x)
+	static inline void * cheri_ptr_sub(void * ptr, unsigned long x)
 	{
 		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
 		if (cheri_gettag(ptr) != 1){
@@ -49,7 +67,7 @@
 		}
 		else {
 			assert(cheri_gettag(new_addr) != 1);
-			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			////RTE_LOG(ERR, EAL, "Tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 	}
@@ -61,12 +79,14 @@
 
 uint64_t eal_get_baseaddr(void)
 {
+	void * address;
+	address= 0x1000000000ULL;
 	/*
 	 * FreeBSD may allocate something in the space we will be mapping things
 	 * before we get a chance to do that, so use a base address that's far
 	 * away from where malloc() et al usually map things.
 	 */
-	return 0x1000000000ULL;
+	return address;
 }
 
 /*
@@ -77,7 +97,6 @@ rte_mem_virt2phy(const void *virtaddr)
 {
 	/* XXX not implemented. This function is only used by
 	 * rte_mempool_virt2iova() when hugepages are disabled. */
-	RTE_LOG(ERR, EAL, "in non implemented function\n");
 	(void)virtaddr;
 	return RTE_BAD_IOVA;
 }
@@ -97,7 +116,6 @@ rte_eal_hugepage_init(void)
 	unsigned int i, j, seg_idx = 0;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-	RTE_LOG(ERR, EAL, "in ret_eal_hugepage_init\n");
 	/* get pointer to global configuration */
 	mcfg = rte_eal_get_configuration()->mem_config;
 
@@ -111,7 +129,7 @@ rte_eal_hugepage_init(void)
 		msl = &mcfg->memsegs[0];
 
 		mem_sz = internal_conf->memory;
-		page_sz = RTE_PGSIZE_4K;
+		page_sz = RTE_PGSIZE_256K;
 		n_segs = mem_sz / page_sz;
 
 		if (eal_memseg_list_init_named(
@@ -119,26 +137,9 @@ rte_eal_hugepage_init(void)
 				RTE_LOG(ERR, EAL, "eal_memseg_list_init_named return -1\n");
 			return -1;
 		}
-		if (cheri_gettag(addr) != 1)
-
-		{
-			printf("addr5 has no tag \n");
-		}
-		else
-		{
-			printf("addr5 has tag \n");
-		}
 		addr = mmap(NULL, mem_sz, PROT_READ | PROT_WRITE,
 				MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-		if (cheri_gettag(addr) != 1)
 
-		{
-			printf("addr6 has no tag \n");
-		}
-		else
-		{
-			printf("addr6 has tag \n");
-		}
 		if (addr == MAP_FAILED) {
 			RTE_LOG(ERR, EAL, "%s: mmap() failed: %s\n", __func__,
 					strerror(errno));
@@ -146,9 +147,9 @@ rte_eal_hugepage_init(void)
 		}
 		msl->base_va = addr;
 		msl->len = mem_sz;
-
+		PYTILIA_IS_TAGGED(addr);
 		eal_memseg_list_populate(msl, addr, n_segs);
-
+		//FOUND;
 		return 0;
 	}
 
@@ -261,13 +262,14 @@ rte_eal_hugepage_init(void)
 			}
 
 			seg->addr = addr;
+
 			if (cheri_gettag(addr) != 1)
 			{
 				printf("addrafter map  has no tag \n");
 			}
 			else
 			{
-				printf("addr after map has tag \n");
+				printf("addr after map has tag seg Addr %p, seg %p \n", seg->addr, seg);
 			}
 
 			seg->iova = physaddr;
@@ -317,7 +319,6 @@ attach_segment(const struct rte_memseg_list *msl, const struct rte_memseg *ms,
 {
 	struct attach_walk_args *wa = arg;
 	void *addr;
-	RTE_LOG(ERR, EAL, "attach segment\n");
 	if (msl->external)
 		return 0;
 
@@ -339,15 +340,14 @@ rte_eal_hugepage_attach(void)
 	unsigned int i;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-
+	//FOUND;
 	hpi = &internal_conf->hugepage_info[0];
-
 	for (i = 0; i < internal_conf->num_hugepage_sizes; i++) {
 		const struct hugepage_info *cur_hpi = &hpi[i];
 		struct attach_walk_args wa;
 
 		memset(&wa, 0, sizeof(wa));
-
+	//	FOUND;
 		/* Obtain a file descriptor for contiguous memory */
 		fd_hugepage = open(cur_hpi->hugedir, O_RDWR);
 		if (fd_hugepage < 0) {
@@ -355,20 +355,21 @@ rte_eal_hugepage_attach(void)
 					cur_hpi->hugedir);
 			goto error;
 		}
+		//FOUND;
 		wa.fd_hugepage = fd_hugepage;
 		wa.seg_idx = 0;
-
+		//FOUND;
 		/* Map the contiguous memory into each memory segment */
 		if (rte_memseg_walk(attach_segment, &wa) < 0) {
 			RTE_LOG(ERR, EAL, "Failed to mmap buffer %u from %s\n",
 				wa.seg_idx, cur_hpi->hugedir);
 			goto error;
 		}
-
+		//FOUND;
 		close(fd_hugepage);
 		fd_hugepage = -1;
 	}
-
+	//FOUND;
 	/* hugepage_info is no longer required */
 	return 0;
 

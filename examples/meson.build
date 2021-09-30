@@ -42,8 +42,9 @@ foreach example: examples
 	build = true
 	sources = []
 	allow_experimental_apis = false
-	default_cflags += ['-femulated-tls']
+	default_cflags += ['-femulated-tls','-g']
 	cflags = default_cflags
+	default_ldflags = [ '-g']
 	ldflags = default_ldflags
 
 	ext_deps = [execinfo]

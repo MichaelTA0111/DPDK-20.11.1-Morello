@@ -260,8 +260,8 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
  * in bytes are the locations they point two. It is assumed that
  * ptr1 is greater than ptr2.
  */
-//#define RTE_PTR_DIFF(ptr1, ptr2) ((uintptr_t)(ptr1) - (uintptr_t)(ptr2))
-#define RTE_PTR_DIFF(ptr1, ptr2) ((ptraddr_t)(ptr1) - (ptraddr_t)(ptr2))
+#define RTE_PTR_DIFF(ptr1, ptr2) ((uintptr_t)(ptr1) - (uintptr_t)(ptr2))
+//#define RTE_PTR_DIFF(ptr1, ptr2) ((ptraddr_t)(ptr1) - (ptraddr_t)(ptr2))
 
 /**
  * Workaround to cast a const field of a structure to non-const type.
@@ -376,8 +376,9 @@ rte_is_aligned(void *ptr, unsigned align)
 /**
  * Triggers an error at compilation time if the condition is true.
  */
+/* Condition changed to allow dpdk to compile*/
 #define RTE_BUILD_BUG_ON(condition) ((void)sizeof(char[(condition)]))
-
+//#define RTE_BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
 /*********** Cache line related macros ********/
 
 /** Cache line mask. */

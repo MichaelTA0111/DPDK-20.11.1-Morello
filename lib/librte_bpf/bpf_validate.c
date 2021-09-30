@@ -2295,7 +2295,7 @@ evaluate(struct bpf_verifier *bvf)
 
 	return rc;
 }
-
+#if 0
 int
 bpf_validate(struct rte_bpf *bpf)
 {
@@ -2340,3 +2340,4 @@ bpf_validate(struct rte_bpf *bpf)
 
 	return rc;
 }
+#endif

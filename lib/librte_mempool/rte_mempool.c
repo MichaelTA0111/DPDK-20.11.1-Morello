@@ -36,23 +36,40 @@
 #include "rte_mempool_trace.h"
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
+#include <execinfo.h>
+#define MAX_BACKTRACE 8
+void *stack_add7[MAX_BACKTRACE];
 
+/*Redefine the PTR_ADD function when compiling purecapability code*/
 #if __has_feature(capabilities)
-	static inline void *__capability cheri_ptr_add(void *__capability ptr, unsigned long x)
+	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
 	{
+		int i;
+		//RTE_LOG(ERR, EAL, "Using Add ptr %p\n",ptr);
+	//	size_t res = backtrace(stack_add7, MAX_BACKTRACE);
+	//	for (i = 0; i < res; i++) {
+	//	printf("%d: %p\n", i, stack_add7[i]);
+	//	}
 		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
 		if (cheri_gettag(ptr) != 1){
-			//RTE_LOG(ERR, EAL, "No tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
+			RTE_LOG(ERR, EAL, "No tag on entry\n");
+			abort();
+			void * result;
+			result=cheri_setaddress(ptr, new_addr);
+			//assert(cheri_gettag(result) != 1);
+			return result;
 		}
 		else {
-			assert(cheri_gettag(new_addr) != 1);
+			//assert(cheri_gettag(new_addr) != 1);
 			//RTE_LOG(ERR, EAL, "Tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
+			void * result;
+			result=cheri_setaddress(ptr, new_addr);
+			assert(cheri_gettag(result) != 0);
+			return result;
 		}
 	}
 	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
-	static inline void *__capability cheri_ptr_sub(void *__capability ptr, unsigned long x)
+	static inline void * cheri_ptr_sub(void * ptr, unsigned long x)
 	{
 		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
 		if (cheri_gettag(ptr) != 1){
@@ -61,7 +78,7 @@
 		}
 		else {
 			assert(cheri_gettag(new_addr) != 1);
-			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			////RTE_LOG(ERR, EAL, "Tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 	}
@@ -405,7 +422,6 @@ static rte_iova_t
 get_iova(void *addr)
 {
 	struct rte_memseg *ms;
-	RTE_LOG(INFO, EAL, "In get_iova\n");
 	/* try registered memory first */
 	ms = rte_mem_virt2memseg(addr, NULL);
 	if (ms == NULL || ms->iova == RTE_BAD_IOVA)
@@ -844,13 +860,14 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	/* asked for zero items */
 	if (n == 0) {
 		rte_errno = EINVAL;
+		printf("%s:%d\n", __FUNCTION__, __LINE__);
 		return NULL;
 	}
 
 	/* asked cache too big */
-	if (cache_size > RTE_MEMPOOL_CACHE_MAX_SIZE ||
-	    CALC_CACHE_FLUSHTHRESH(cache_size) > n) {
+	if (cache_size > RTE_MEMPOOL_CACHE_MAX_SIZE) {
 		rte_errno = EINVAL;
+		printf("%s:%d\n", __FUNCTION__, __LINE__);
 		return NULL;
 	}
 
@@ -861,6 +878,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	/* calculate mempool object sizes. */
 	if (!rte_mempool_calc_obj_size(elt_size, flags, &objsz)) {
 		rte_errno = EINVAL;
+		printf("%s:%d\n", __FUNCTION__, __LINE__);
 		return NULL;
 	}
 
@@ -878,6 +896,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	te = rte_zmalloc("MEMPOOL_TAILQ_ENTRY", sizeof(*te), 0);
 	if (te == NULL) {
 		RTE_LOG(ERR, MEMPOOL, "Cannot allocate tailq entry!\n");
+		printf("%s:%d\n", __FUNCTION__, __LINE__);
 		goto exit_unlock;
 	}
 
@@ -888,19 +907,22 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	ret = snprintf(mz_name, sizeof(mz_name), RTE_MEMPOOL_MZ_FORMAT, name);
 	if (ret < 0 || ret >= (int)sizeof(mz_name)) {
 		rte_errno = ENAMETOOLONG;
+		printf("%s:%d\n", __FUNCTION__, __LINE__);
 		goto exit_unlock;
 	}
 
 	mz = rte_memzone_reserve(mz_name, mempool_size, socket_id, mz_flags);
-	if (mz == NULL)
-		goto exit_unlock;
-
+	if (mz == NULL) {
+		printf("%s:%d\n", __FUNCTION__, __LINE__);
+ 		goto exit_unlock;
+	}
 	/* init the mempool structure */
 	mp = mz->addr;
 	memset(mp, 0, MEMPOOL_HEADER_SIZE(mp, cache_size));
 	ret = strlcpy(mp->name, name, sizeof(mp->name));
 	if (ret < 0 || ret >= (int)sizeof(mp->name)) {
 		rte_errno = ENAMETOOLONG;
+		printf("%s:%d\n", __FUNCTION__, __LINE__);
 		goto exit_unlock;
 	}
 	mp->mz = mz;

@@ -29,7 +29,11 @@
 #include "malloc_heap.h"
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
+#include <cheri/cherireg.h>
+#include <execinfo.h>
 
+#define PYTILIA_IS_TAGGED(_ptr) \
+	printf("%s: %s %p tagged? %s\n", __FUNCTION__, #_ptr, _ptr, cheri_gettag(_ptr) ? "Y" : "N");
 /*
  * Try to mmap *size bytes in /dev/zero. If it is successful, return the
  * pointer to the mmap'd area and keep *size unmodified. Else, retry
@@ -37,23 +41,41 @@
  * 0. In this case, return NULL. Note: this function returns an address
  * which is a multiple of hugepage size.
  */
+#include <execinfo.h>
+#define MAX_BACKTRACE 8
+void *stack_add1[MAX_BACKTRACE];
 
+
+/*Redefine the PTR_ADD function when compiling purecapability code*/
 #if __has_feature(capabilities)
-	static inline void *__capability cheri_ptr_add(void *__capability ptr, unsigned long x)
+	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
 	{
+		int i;
+		//RTE_LOG(ERR, EAL, "Using Add ptr %p\n",ptr);
+		//size_t res = backtrace(stack_add1, MAX_BACKTRACE);
+	//	for (i = 0; i < res; i++) {
+	//	printf("%d: %p\n", i, stack_add1[i]);
+	//	}
 		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
 		if (cheri_gettag(ptr) != 1){
-			//RTE_LOG(ERR, EAL, "No tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
+			RTE_LOG(ERR, EAL, "No tag on entry\n");
+			abort();
+			void * result;
+			result=cheri_setaddress(ptr, new_addr);
+			//assert(cheri_gettag(result) != 1);
+			return result;
 		}
 		else {
-			assert(cheri_gettag(new_addr) != 1);
+			//assert(cheri_gettag(new_addr) != 1);
 			//RTE_LOG(ERR, EAL, "Tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
+			void * result;
+			result=cheri_setaddress(ptr, new_addr);
+			assert(cheri_gettag(result) != 0);
+			return result;
 		}
 	}
 	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
-	static inline void *__capability cheri_ptr_sub(void *__capability ptr, unsigned long x)
+	static inline void * cheri_ptr_sub(void * ptr, unsigned long x)
 	{
 		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
 		if (cheri_gettag(ptr) != 1){
@@ -61,8 +83,8 @@
 			return cheri_setaddress(ptr, new_addr);
 		}
 		else {
-			assert(cheri_gettag(new_addr) != 1);
-			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			//assert(cheri_gettag(new_addr) != 1);
+			////RTE_LOG(ERR, EAL, "Tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 	}
@@ -87,7 +109,6 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 		eal_get_internal_configuration();
 	if (system_page_sz == 0)
 		system_page_sz = rte_mem_page_size();
-	RTE_LOG(ERR, EAL, "Ask a virtual area of 0x%zx bytes\n", *size);
 	RTE_LOG(DEBUG, EAL, "Ask a virtual area of 0x%zx bytes\n", *size);
 
 	addr_is_hint = (flags & EAL_VIRTUAL_AREA_ADDR_IS_HINT) > 0;
@@ -100,15 +121,21 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 
 #ifdef RTE_ARCH_64
 	if (next_baseaddr == NULL && internal_conf->base_virtaddr == 0 &&
-			rte_eal_process_type() == RTE_PROC_PRIMARY)
-		next_baseaddr = (void *)eal_get_baseaddr();
+			rte_eal_process_type() == RTE_PROC_PRIMARY){
+				next_baseaddr = (void *)eal_get_baseaddr();
+			}
+
 #endif
-	if (requested_addr == NULL && next_baseaddr != NULL) {
+#if 0
+	(requested_addr == NULL && next_baseaddr != NULL) {
 		requested_addr = next_baseaddr;
 		requested_addr = RTE_PTR_ALIGN(requested_addr, page_sz);
 		addr_is_hint = true;
 	}
+#endif
 
+
+	requested_addr=NULL;
 	/* we don't need alignment of resulting pointer in the following cases:
 	 *
 	 * 1. page size is equal to system size
@@ -147,7 +174,6 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 				(mapped_addr != requested_addr))
 		{
 			try++;
-
 			next_baseaddr = RTE_PTR_ADD(next_baseaddr, page_sz);
 			if (try <= MAX_MMAP_WITH_DEFINED_ADDR_TRIES) {
 				/* hint was not used. Try with another offset */
@@ -189,12 +215,10 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 		next_baseaddr = RTE_PTR_ADD(aligned_addr, *size);
 	}
 	if (unmap) {
-		RTE_LOG(ERR, EAL, "eal_mem_free\n");
 		eal_mem_free(mapped_addr, map_sz);
 	} else if (!no_align) {
 		void *map_end, *aligned_end;
 		size_t before_len, after_len;
-		RTE_LOG(ERR, EAL, "!no align\n");
 
 		/* when we reserve space with alignment, we add alignment to
 		 * mapping size. On 32-bit, if 1GB alignment was requested, this
@@ -202,7 +226,6 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 		 * afford. so, if alignment was performed, check if any unneeded
 		 * address space can be unmapped back.
 		 */
-
 		map_end = RTE_PTR_ADD(mapped_addr, (size_t)map_sz);
 		aligned_end = RTE_PTR_ADD(aligned_addr, *size);
 
@@ -266,7 +289,6 @@ eal_memseg_list_alloc(struct rte_memseg_list *msl, int reserve_flags)
 {
 	size_t page_sz, mem_sz;
 	void *addr;
-	RTE_LOG(ERR, EAL, "In eal memseg list alloc\n");
 	page_sz = msl->page_sz;
 	mem_sz = page_sz * msl->memseg_arr.len;
 
@@ -299,23 +321,30 @@ void
 eal_memseg_list_populate(struct rte_memseg_list *msl, void *addr, int n_segs)
 {
 	size_t page_sz = msl->page_sz;
+	size_t len_cap;
 	int i;
-	RTE_LOG(ERR, EAL, "In eal memseg list populate\n");
+	PYTILIA_IS_TAGGED(addr);
 	for (i = 0; i < n_segs; i++) {
 		struct rte_fbarray *arr = &msl->memseg_arr;
-		struct rte_memseg *ms = rte_fbarray_get(arr, i);
+		struct rte_memseg * __capability ms = RTE_PTR_ADD(arr->data, i * arr->elt_sz);
 
 		if (rte_eal_iova_mode() == RTE_IOVA_VA)
+		{
 			ms->iova = (uintptr_t)addr;
+		}
 		else
 			ms->iova = RTE_BAD_IOVA;
-		ms->addr = addr;
+	//	RTE_LOG(ERR, EAL, "i ========= =%d of nseg  %d\n",
+	//		i, n_segs);
 		ms->hugepage_sz = page_sz;
 		ms->socket_id = 0;
 		ms->len = page_sz;
-
+		ms->addr=addr;
+		if (i < 5) {
+			PYTILIA_IS_TAGGED(ms);
+			PYTILIA_IS_TAGGED(ms->addr);
+		}
 		rte_fbarray_set_used(arr, i);
-
 		addr = RTE_PTR_ADD(addr, page_sz);
 	}
 }
@@ -326,7 +355,6 @@ virt2memseg(const void *addr, const struct rte_memseg_list *msl)
 	const struct rte_fbarray *arr;
 	void *start, *end;
 	int ms_idx;
-	RTE_LOG(ERR, EAL, "In virt2memseg\n");
 	if (msl == NULL)
 		return NULL;
 
@@ -349,7 +377,6 @@ virt2memseg_list(const void *addr)
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	struct rte_memseg_list *msl;
 	int msl_idx;
-	RTE_LOG(ERR, EAL, "In virt2memseg list\n");
 	for (msl_idx = 0; msl_idx < RTE_MAX_MEMSEG_LISTS; msl_idx++) {
 		void *start, *end;
 		msl = &mcfg->memsegs[msl_idx];
@@ -380,7 +407,6 @@ find_virt(const struct rte_memseg_list *msl __rte_unused,
 		const struct rte_memseg *ms, void *arg)
 {
 	struct virtiova *vi = arg;
-	RTE_LOG(ERR, EAL, "In find virt \n");
 	if (vi->iova >= ms->iova && vi->iova < (ms->iova + ms->len)) {
 		size_t offset = vi->iova - ms->iova;
 		vi->virt = RTE_PTR_ADD(ms->addr, offset);
@@ -394,7 +420,6 @@ find_virt_legacy(const struct rte_memseg_list *msl __rte_unused,
 		const struct rte_memseg *ms, size_t len, void *arg)
 {
 	struct virtiova *vi = arg;
-	RTE_LOG(ERR, EAL, "In find virt legacy\n");
 	if (vi->iova >= ms->iova && vi->iova < (ms->iova + len)) {
 		size_t offset = vi->iova - ms->iova;
 		vi->virt = RTE_PTR_ADD(ms->addr, offset);
@@ -410,7 +435,6 @@ rte_mem_iova2virt(rte_iova_t iova)
 	struct virtiova vi;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-	RTE_LOG(ERR, EAL, "In rte mem iovan");
 	memset(&vi, 0, sizeof(vi));
 
 	vi.iova = iova;
@@ -463,7 +487,6 @@ dump_memseg(const struct rte_memseg_list *msl, const struct rte_memseg *ms,
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	int msl_idx, ms_idx, fd;
 	FILE *f = arg;
-	RTE_LOG(ERR, EAL, "In dump memseg\n");
 	msl_idx = msl - mcfg->memsegs;
 	if (msl_idx < 0 || msl_idx >= RTE_MAX_MEMSEG_LISTS)
 		return -1;
@@ -570,7 +593,6 @@ check_iova(const struct rte_memseg_list *msl __rte_unused,
 {
 	uint64_t *mask = arg;
 	rte_iova_t iova;
-	RTE_LOG(ERR, EAL, "In check iova\n");
 	/* higher address within segment */
 	iova = (ms->iova + ms->len) - 1;
 	if (!(iova & *mask))
@@ -592,7 +614,6 @@ check_dma_mask(uint8_t maskbits, bool thread_unsafe)
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	uint64_t mask;
 	int ret;
-	RTE_LOG(ERR, EAL, "In check dma mask\n");
 	/* Sanity check. We only check width can be managed with 64 bits
 	 * variables. Indeed any higher value is likely wrong. */
 	if (maskbits > MAX_DMA_MASK_BITS) {
@@ -699,7 +720,6 @@ rte_memseg_contig_walk_thread_unsafe(rte_memseg_contig_walk_t func, void *arg)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	int i, ms_idx, ret = 0;
-	RTE_LOG(ERR, EAL, "In rte memseg contig walk thread unsafe\n");
 	for (i = 0; i < RTE_MAX_MEMSEG_LISTS; i++) {
 		struct rte_memseg_list *msl = &mcfg->memsegs[i];
 		const struct rte_memseg *ms;
@@ -723,25 +743,9 @@ rte_memseg_contig_walk_thread_unsafe(rte_memseg_contig_walk_t func, void *arg)
 			 */
 			n_segs = rte_fbarray_find_contig_used(arr, ms_idx);
 			len = n_segs * msl->page_sz;
-			if (cheri_gettag(msl) != 1)
-			{
-				printf("msl has no tag \n");
-			}
-			else
-			{
-				printf("msl has tag \n");
-			}
 
-			if (cheri_gettag(ms->addr) != 1)
-			{
-				printf("ms Addr has no tag \n");
-			}
-			else
-			{
-				printf("ms Addr has tag \n");
-			}
-
-
+			PYTILIA_IS_TAGGED(ms);
+			PYTILIA_IS_TAGGED(ms->addr);
 			ret = func(msl, ms, len, arg);
 			if (ret)
 				return ret;
@@ -756,15 +760,6 @@ int
 rte_memseg_contig_walk(rte_memseg_contig_walk_t func, void *arg __rte_unused)
 {
 	int ret = 0;
-	RTE_LOG(ERR, EAL, "In rte memseg contig walk\n");
-	if (cheri_gettag(func) != 1)
-	{
-		printf("func 1 has no tag \n");
-	}
-	else
-	{
-		printf("func 1 has tag \n");
-	}
 	/* do not allow allocations/frees/init while we iterate */
 	rte_mcfg_mem_read_lock();
 	ret = rte_memseg_contig_walk_thread_unsafe(func,NULL);
@@ -778,7 +773,6 @@ rte_memseg_walk_thread_unsafe(rte_memseg_walk_t func, void *arg)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	int i, ms_idx, ret = 0;
-	RTE_LOG(ERR, EAL, "in rte memseg Thread unsafe\n");
 	for (i = 0; i < RTE_MAX_MEMSEG_LISTS; i++) {
 		struct rte_memseg_list *msl = &mcfg->memsegs[i];
 		const struct rte_memseg *ms;
@@ -813,7 +807,6 @@ int
 rte_memseg_walk(rte_memseg_walk_t func, void *arg)
 {
 	int ret = 0;
-	RTE_LOG(ERR, EAL, "in rte memseg walk\n");
 	/* do not allow allocations/frees/init while we iterate */
 	rte_mcfg_mem_read_lock();
 	ret = rte_memseg_walk_thread_unsafe(func, arg);
@@ -827,7 +820,6 @@ rte_memseg_list_walk_thread_unsafe(rte_memseg_list_walk_t func, void *arg)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	int i, ret = 0;
-	RTE_LOG(ERR, EAL, "In rte memseg list walk thread unsafe\n");
 	for (i = 0; i < RTE_MAX_MEMSEG_LISTS; i++) {
 		struct rte_memseg_list *msl = &mcfg->memsegs[i];
 
@@ -845,7 +837,6 @@ int
 rte_memseg_list_walk(rte_memseg_list_walk_t func, void *arg)
 {
 	int ret = 0;
-	RTE_LOG(ERR, EAL, "In rte memseg list walk\n");
 	/* do not allow allocations/frees/init while we iterate */
 	rte_mcfg_mem_read_lock();
 	ret = rte_memseg_list_walk_thread_unsafe(func, arg);
@@ -861,7 +852,6 @@ rte_memseg_get_fd_thread_unsafe(const struct rte_memseg *ms)
 	struct rte_memseg_list *msl;
 	struct rte_fbarray *arr;
 	int msl_idx, seg_idx, ret;
-	RTE_LOG(ERR, EAL, "In rte memseg get fd thread unsafe\n");
 	if (ms == NULL) {
 		rte_errno = EINVAL;
 		return -1;
@@ -900,7 +890,6 @@ int
 rte_memseg_get_fd(const struct rte_memseg *ms)
 {
 	int ret;
-	RTE_LOG(ERR, EAL, "In rte memseg get fd\n");
 	rte_mcfg_mem_read_lock();
 	ret = rte_memseg_get_fd_thread_unsafe(ms);
 	rte_mcfg_mem_read_unlock();
@@ -916,7 +905,6 @@ rte_memseg_get_fd_offset_thread_unsafe(const struct rte_memseg *ms,
 	struct rte_memseg_list *msl;
 	struct rte_fbarray *arr;
 	int msl_idx, seg_idx, ret;
-	RTE_LOG(ERR, EAL, "In rte memseg get fd offset thread unsafe\n");
 	if (ms == NULL || offset == NULL) {
 		rte_errno = EINVAL;
 		return -1;
@@ -970,7 +958,6 @@ rte_extmem_register(void *va_addr, size_t len, rte_iova_t iova_addrs[],
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	unsigned int socket_id, n;
 	int ret = 0;
-	RTE_LOG(ERR, EAL, "In rte extmem register\n");
 	if (va_addr == NULL || page_sz == 0 || len == 0 ||
 			!rte_is_power_of_2(page_sz) ||
 			RTE_ALIGN(len, page_sz) != len ||
@@ -1043,7 +1030,6 @@ sync_memory(void *va_addr, size_t len, bool attach)
 {
 	struct rte_memseg_list *msl;
 	int ret = 0;
-	RTE_LOG(ERR, EAL, "In sync memory\n");
 	if (va_addr == NULL || len == 0) {
 		rte_errno = EINVAL;
 		return -1;
@@ -1086,30 +1072,32 @@ rte_eal_memory_init(void)
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+		//FOUND;
 	int retval;
 	RTE_LOG(DEBUG, EAL, "Setting up physically contiguous memory...\n");
-
+	//FOUND;
 	if (!mcfg)
 		return -1;
 
 	/* lock mem hotplug here, to prevent races while we init */
 	rte_mcfg_mem_read_lock();
-
+	//FOUND;
 	if (rte_eal_memseg_init() < 0)
 		goto fail;
-
+	//FOUND;
 	if (eal_memalloc_init() < 0)
 		goto fail;
-
+	//FOUND;
 	retval = rte_eal_process_type() == RTE_PROC_PRIMARY ?
 			rte_eal_hugepage_init() :
 			rte_eal_hugepage_attach();
+			//FOUND;
 	if (retval < 0)
 		goto fail;
-
+	//FOUND;
 	if (internal_conf->no_shconf == 0 && rte_eal_memdevice_init() < 0)
 		goto fail;
-
+	//FOUND;
 	return 0;
 fail:
 	rte_mcfg_mem_read_unlock();

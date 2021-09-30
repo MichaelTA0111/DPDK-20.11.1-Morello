@@ -235,6 +235,7 @@ rte_pktmbuf_pool_create_by_ops(const char *name, unsigned int n,
 	if (RTE_ALIGN(priv_size, RTE_MBUF_PRIV_ALIGN) != priv_size) {
 		RTE_LOG(ERR, MBUF, "mbuf priv_size=%u is not aligned\n",
 			priv_size);
+		printf("%s:%d\n", __FUNCTION__, __LINE__);
 		rte_errno = EINVAL;
 		return NULL;
 	}
@@ -246,14 +247,17 @@ rte_pktmbuf_pool_create_by_ops(const char *name, unsigned int n,
 
 	mp = rte_mempool_create_empty(name, n, elt_size, cache_size,
 		 sizeof(struct rte_pktmbuf_pool_private), socket_id, 0);
-	if (mp == NULL)
-		return NULL;
+	if (mp == NULL) {
+		printf("%s:%d\n", __FUNCTION__, __LINE__);
+ 		return NULL;
+	}
 
 	if (mp_ops_name == NULL)
 		mp_ops_name = rte_mbuf_best_mempool_ops();
 	ret = rte_mempool_set_ops_byname(mp, mp_ops_name, NULL);
 	if (ret != 0) {
 		RTE_LOG(ERR, MBUF, "error setting mempool handler\n");
+		printf("%s:%d\n", __FUNCTION__, __LINE__);
 		rte_mempool_free(mp);
 		rte_errno = -ret;
 		return NULL;
@@ -264,11 +268,12 @@ rte_pktmbuf_pool_create_by_ops(const char *name, unsigned int n,
 	if (ret < 0) {
 		rte_mempool_free(mp);
 		rte_errno = -ret;
+		printf("%s:%d\n", __FUNCTION__, __LINE__);
 		return NULL;
 	}
 
 	rte_mempool_obj_iter(mp, rte_pktmbuf_init, NULL);
-
+	printf("%s:%d\n", __FUNCTION__, __LINE__);
 	return mp;
 }
 

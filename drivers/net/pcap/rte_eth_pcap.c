@@ -26,6 +26,8 @@
 #include <rte_mbuf.h>
 #include <rte_bus_vdev.h>
 #include <rte_string_fns.h>
+#include <cheri/cheri.h>
+#include <cheri/cheric.h>
 
 #define RTE_ETH_PCAP_SNAPSHOT_LEN 65535
 #define RTE_ETH_PCAP_SNAPLEN RTE_ETHER_MAX_JUMBO_FRAME_LEN
@@ -256,6 +258,11 @@ eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			rte_memcpy(rte_pktmbuf_mtod(mbuf, void *), packet,
 					header.caplen);
 			mbuf->data_len = (uint16_t)header.caplen;
+			cheri_setbounds(mbuf->buf_addr, mbuf->data_len);
+			cheri_andperm(mbuf->buf_addr, 0x2717F);
+			printf("setting up data len of %u in %u: 0x%X %p %p\n",
+			      mbuf->data_len, mbuf->buf_len, cheri_getperm(mbuf->buf_addr),
+			      mbuf, mbuf->buf_addr);
 		} else {
 			/* Try read jumbo frame into multi mbufs. */
 			if (unlikely(eth_pcap_rx_jumbo(pcap_q->mb_pool,

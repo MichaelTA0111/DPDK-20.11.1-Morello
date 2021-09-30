@@ -45,8 +45,6 @@
 #include "eal_memalloc.h"
 #include "eal_memcfg.h"
 #include "eal_private.h"
-#include <cheri/cheri.h>
-#include <cheri/cheric.h>
 
 const int anonymous_hugepages_supported =
 #ifdef MAP_HUGE_SHIFT
@@ -55,38 +53,6 @@ const int anonymous_hugepages_supported =
 #else
 		0;
 #define RTE_MAP_HUGE_SHIFT 26
-#endif
-
-
-#if __has_feature(capabilities)
-	static inline void *__capability cheri_ptr_add(void *__capability ptr, unsigned long x)
-	{
-		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
-		if (cheri_gettag(ptr) != 1){
-			//RTE_LOG(ERR, EAL, "No tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
-		}
-		else {
-			assert(cheri_gettag(new_addr) != 1);
-			//RTE_LOG(ERR, EAL, "Tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
-		}
-	}
-	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
-	static inline void *__capability cheri_ptr_sub(void *__capability ptr, unsigned long x)
-	{
-		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
-		if (cheri_gettag(ptr) != 1){
-			//RTE_LOG(ERR, EAL, "No tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
-		}
-		else {
-			assert(cheri_gettag(new_addr) != 1);
-			//RTE_LOG(ERR, EAL, "Tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
-		}
-	}
-	#define RTE_PTR_SUB(ptr, x) cheri_ptr_sub(ptr, x)
 #endif
 
 /*
@@ -516,7 +482,7 @@ resize_hugefile(int fd, uint64_t fa_offset, uint64_t page_sz, bool grow)
 	 */
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-	RTE_LOG(ERR, EAL, "resize hugefile\n");
+
 	if (internal_conf->in_memory)
 		return resize_hugefile_in_memory(fd, fa_offset,
 				page_sz, grow);
@@ -746,7 +712,7 @@ free_seg(struct rte_memseg *ms, struct hugepage_info *hi,
 	bool exit_early;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-	RTE_LOG(INFO, EAL, "In free seg\n",;
+
 	/* erase page data */
 	memset(ms->addr, 0, ms->len);
 
@@ -967,7 +933,7 @@ free_seg_walk(const struct rte_memseg_list *msl, void *arg)
 	int msl_idx, seg_idx, ret, dir_fd = -1;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-	RTE_LOG(INFO, EAL, "In free seg walk\n");
+
 	start_addr = (uintptr_t) msl->base_va;
 	end_addr = start_addr + msl->len;
 

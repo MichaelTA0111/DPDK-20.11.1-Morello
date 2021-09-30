@@ -52,7 +52,6 @@
 #include "eal_options.h"
 #include "eal_memcfg.h"
 #include "eal_trace.h"
-#include "vm_extern.h"
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
 
@@ -788,6 +787,7 @@ rte_eal_init(int argc, char **argv)
 		rte_eal_init_alert("Cannot init config");
 		return -1;
 	}
+	//FOUND;
 
 	if (rte_eal_intr_init() < 0) {
 		rte_eal_init_alert("Cannot init interrupt-handling thread");
@@ -874,44 +874,49 @@ rte_eal_init(int argc, char **argv)
 		rte_errno = ENODEV;
 		return -1;
 	}
+	//FOUND;
 
 	if (rte_eal_memory_init() < 0) {
 		rte_eal_init_alert("Cannot init memory");
 		rte_errno = ENOMEM;
 		return -1;
 	}
+	//FOUND;
 
 	if (rte_eal_malloc_heap_init() < 0) {
 		rte_eal_init_alert("Cannot init malloc heap");
 		rte_errno = ENODEV;
 		return -1;
 	}
+	//FOUND;
 
 	if (rte_eal_tailqs_init() < 0) {
 		rte_eal_init_alert("Cannot init tail queues for objects");
 		rte_errno = EFAULT;
 		return -1;
 	}
+	//FOUND;
 
 	if (rte_eal_timer_init() < 0) {
 		rte_eal_init_alert("Cannot init HPET or TSC timers");
 		rte_errno = ENOTSUP;
 		return -1;
 	}
-
+	//FOUND;
 	eal_check_mem_on_local_socket();
-
+	//FOUND;
 	if (pthread_setaffinity_np(pthread_self(), sizeof(rte_cpuset_t),
 			&lcore_config[config->main_lcore].cpuset) != 0) {
 		rte_eal_init_alert("Cannot set affinity");
 		rte_errno = EINVAL;
 		return -1;
 	}
+	//FOUND;
 	__rte_thread_init(config->main_lcore,
 		&lcore_config[config->main_lcore].cpuset);
-
+	//FOUND;
 	ret = eal_thread_dump_current_affinity(cpuset, sizeof(cpuset));
-
+	//FOUND;
 	RTE_LOG(DEBUG, EAL, "Main lcore %u is ready (tid=%p;cpuset=[%s%s])\n",
 		config->main_lcore, thread_id, cpuset,
 		ret == 0 ? "" : "...");
@@ -945,14 +950,14 @@ rte_eal_init(int argc, char **argv)
 		if (ret != 0)
 			rte_panic("Cannot set affinity\n");
 	}
-
+	//FOUND;
 	/*
 	 * Launch a dummy function on all worker lcores, so that main lcore
 	 * knows they are all ready when this function returns.
 	 */
 	rte_eal_mp_remote_launch(sync_func, NULL, SKIP_MAIN);
 	rte_eal_mp_wait_lcore();
-
+	//FOUND;
 	/* initialize services so vdevs register service during bus_probe. */
 	ret = rte_service_init();
 	if (ret) {
@@ -960,14 +965,14 @@ rte_eal_init(int argc, char **argv)
 		rte_errno = -ret;
 		return -1;
 	}
-
+	//FOUND;
 	/* Probe all the buses and devices/drivers on them */
 	if (rte_bus_probe()) {
 		rte_eal_init_alert("Cannot probe devices");
 		rte_errno = ENOTSUP;
 		return -1;
 	}
-
+	//FOUND;
 	/* initialize default service/lcore mappings and start running. Ignore
 	 * -ENOTSUP, as it indicates no service coremask passed to EAL.
 	 */
@@ -976,6 +981,7 @@ rte_eal_init(int argc, char **argv)
 		rte_errno = -ret;
 		return -1;
 	}
+	//FOUND;
 
 	/*
 	 * Clean up unused files in runtime directory. We do this at the end of
@@ -991,6 +997,7 @@ rte_eal_init(int argc, char **argv)
 		rte_eal_init_alert("Cannot clear runtime directory");
 		return -1;
 	}
+	//FOUND;
 	if (!internal_conf->no_telemetry) {
 		const char *error_str = NULL;
 		if (rte_telemetry_init(rte_eal_get_runtime_dir(),
@@ -1004,6 +1011,7 @@ rte_eal_init(int argc, char **argv)
 	}
 
 	eal_mcfg_complete();
+	//FOUND;
 
 	return fctret;
 }

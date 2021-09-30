@@ -46,32 +46,21 @@ extern "C" {
 /**< Prevent this segment from being freed back to the OS. */
 struct rte_memseg {
 	rte_iova_t iova;            /**< Start IO address. */
-	RTE_STD_C11
-	union {
-		void *__capability addr;         /**< Start virtual address. */
-		//void *addr;
-		uint64_t addr_64;   /**< Makes sure addr is always 64 bits */
-	};
+	void *addr;
 	size_t len;               /**< Length of the segment. */
 	uint64_t hugepage_sz;       /**< The pagesize of underlying memory */
 	int32_t socket_id;          /**< NUMA socket ID. */
 	uint32_t nchannel;          /**< Number of channels. */
 	uint32_t nrank;             /**< Number of ranks. */
 	uint32_t flags;             /**< Memseg-specific flags */
-}__rte_packed;
+};
 
 /**
  * memseg list is a special case as we need to store a bunch of other data
  * together with the array itself.
  */
 struct rte_memseg_list {
-	RTE_STD_C11
-	union {
-		void* base_va;
-		/**< Base virtual address for this memseg list. */
-		uint64_t addr_64;
-		/**< Makes sure addr is always 64-bits */
-	};
+	void *base_va;
 	uint64_t page_sz; /**< Page size for all memsegs in this list. */
 	int socket_id; /**< Socket ID for all memsegs in this list. */
 	volatile uint32_t version; /**< version number for multiprocess sync. */

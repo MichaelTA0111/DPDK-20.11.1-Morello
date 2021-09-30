@@ -25,23 +25,42 @@
 #include "malloc_heap.h"
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
+#include <execinfo.h>
+#define MAX_BACKTRACE 8
+void *stack_add2[MAX_BACKTRACE];
 
+#define PYTILIA_IS_TAGGED(_ptr) \
++	printf("%s: %s %p tagged? %s\n", __FUNCTION__, #_ptr, _ptr, cheri_gettag(_ptr) ? "Y" : "N");
+/*Redefine the PTR_ADD function when compiling purecapability code*/
 #if __has_feature(capabilities)
-	static inline void *__capability cheri_ptr_add(void *__capability ptr, unsigned long x)
+	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
 	{
+		int i;
+		//RTE_LOG(ERR, EAL, "Using Add ptr %p\n",ptr);
+	//	size_t res = backtrace(stack_add2, MAX_BACKTRACE);
+	//	for (i = 0; i < res; i++) {
+	//	printf("%d: %p\n", i, stack_add2[i]);
+	//	}
 		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
 		if (cheri_gettag(ptr) != 1){
-			//RTE_LOG(ERR, EAL, "No tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
+			RTE_LOG(ERR, EAL, "No tag on entry\n");
+			abort();
+			void * result;
+			result=cheri_setaddress(ptr, new_addr);
+			//assert(cheri_gettag(result) != 1);
+			return result;
 		}
 		else {
-			assert(cheri_gettag(new_addr) != 1);
+			//assert(cheri_gettag(new_addr) != 1);
 			//RTE_LOG(ERR, EAL, "Tag on entry\n");
-			return cheri_setaddress(ptr, new_addr);
+			void * result;
+			result=cheri_setaddress(ptr, new_addr);
+			assert(cheri_gettag(result) != 0);
+			return result;
 		}
 	}
 	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
-	static inline void *__capability cheri_ptr_sub(void *__capability ptr, unsigned long x)
+	static inline void * cheri_ptr_sub(void * ptr, unsigned long x)
 	{
 		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
 		if (cheri_gettag(ptr) != 1){
@@ -50,7 +69,7 @@
 		}
 		else {
 			assert(cheri_gettag(new_addr) != 1);
-			//RTE_LOG(ERR, EAL, "Tag on entry\n");
+			////RTE_LOG(ERR, EAL, "Tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 	}
@@ -78,7 +97,6 @@ malloc_elem_find_max_iova_contig(struct malloc_elem *elem, size_t align)
 	size_t page_sz, cur, max;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-	RTE_LOG(ERR, EAL, "malloc elem find max iova contig\n");
 	page_sz = (size_t)elem->msl->page_sz;
 	data_start = RTE_PTR_ADD(elem, MALLOC_ELEM_HEADER_LEN);
 	data_end = RTE_PTR_ADD(elem, elem->size - MALLOC_ELEM_TRAILER_LEN);
@@ -164,35 +182,17 @@ malloc_elem_init(struct malloc_elem *elem, struct malloc_heap *heap,
 		struct rte_memseg_list *msl, size_t size,
 		struct malloc_elem *orig_elem, size_t orig_size)
 {
-	/*RTE_LOG(ERR, EAL, "In Malloc elem_init\n");
-	if (cheri_gettag(elem) != 1)
-	{
-		printf("elem has no tag \n");
-	}
-	else
-	{
-		printf("elem has tag \n");
-	}
-
-	if (cheri_gettag(heap) != 1)
-	{
-		printf("heap 3 has no tag \n");
-	}
-	else
-	{
-		printf("heap 3 has tag \n");
-	}*/
-
+	PYTILIA_IS_TAGGED(elem);
 	elem->prev = NULL;
 	elem->next = NULL;
 	memset(&elem->free_list, 0, sizeof(elem->free_list));
-	elem->heap = heap;
 	elem->msl = msl;
 	elem->state = ELEM_FREE;
 	elem->size = size;
 	elem->pad = 0;
 	elem->orig_elem = orig_elem;
 	elem->orig_size = orig_size;
+	elem->heap = heap;
 	set_header(elem);
 	set_trailer(elem);
 }
