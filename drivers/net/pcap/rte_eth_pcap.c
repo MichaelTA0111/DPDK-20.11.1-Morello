@@ -258,8 +258,12 @@ eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			rte_memcpy(rte_pktmbuf_mtod(mbuf, void *), packet,
 					header.caplen);
 			mbuf->data_len = (uint16_t)header.caplen;
-			cheri_setbounds(mbuf->buf_addr, mbuf->data_len);
-			cheri_andperm(mbuf->buf_addr, 0x2717F);
+			mbuf->buf_addr = cheri_setbounds(mbuf->buf_addr, mbuf->data_off + mbuf->data_len);
+			mbuf->buf_addr = cheri_andperm(mbuf->buf_addr, ~CHERI_PERM_STORE);
+			printf("base 0x%lX offset 0x%lX length 0x%lX\n",
+                    cheri_getbase(mbuf->buf_addr),
+                    cheri_getoffset(mbuf->buf_addr),
+                    cheri_getlength(mbuf->buf_addr));
 			printf("setting up data len of %u in %u: 0x%X %p %p\n",
 			      mbuf->data_len, mbuf->buf_len, cheri_getperm(mbuf->buf_addr),
 			      mbuf, mbuf->buf_addr);

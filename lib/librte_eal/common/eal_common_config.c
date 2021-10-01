@@ -20,12 +20,6 @@ void *stack_addresses[MAX_BACKTRACE];
 	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
 	{
 		int i;
-		/* Debug message */
-		////RTE_LOG(ERR, EAL, "Using Add ptr %p\n",ptr);
-		//size_t res = backtrace(stack_addresses, MAX_BACKTRACE);
-		//for (i = 0; i < res; i++) {
-		//printf("%d: %p\n", i, stack_addresses[i]);
-		//}
 		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
 		if (cheri_gettag(ptr) != 1){
 			RTE_LOG(ERR, EAL, "No tag on entry\n");
@@ -33,16 +27,10 @@ void *stack_addresses[MAX_BACKTRACE];
 			abort();
 			void * result;
 			result=cheri_setaddress(ptr, new_addr);
-			//assert(cheri_gettag(result) != 1);
 			return result;
 		}
 		else {
-			//assert(cheri_gettag(new_addr) != 1);
-		//	//RTE_LOG(ERR, EAL, "Tag on entry\n");
-			void * result;
-			result=cheri_setaddress(ptr, new_addr);
-			assert(cheri_gettag(result) != 0);
-			return result;
+			return cheri_setaddress(ptr, new_addr);;
 		}
 	}
 	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)

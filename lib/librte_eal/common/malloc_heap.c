@@ -33,9 +33,6 @@
 #include "malloc_mp.h"
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
-#include <execinfo.h>
-#define MAX_BACKTRACE 8
-void *stack_add3[MAX_BACKTRACE];
 
 /*Redefine the PTR_ADD function when compiling purecapability code*/
 #if __has_feature(capabilities)
@@ -44,27 +41,16 @@ void *stack_add3[MAX_BACKTRACE];
 	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
 	{
 		int i;
-		//RTE_LOG(ERR, EAL, "Using Add ptr %p\n",ptr);
-	//	size_t res = backtrace(stack_add3, MAX_BACKTRACE);
-	//	for (i = 0; i < res; i++) {
-	//	printf("%d: %p\n", i, stack_add3[i]);
-	//	}
 		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
 		if (cheri_gettag(ptr) != 1){
 			RTE_LOG(ERR, EAL, "No tag on entry\n");
 			abort();
 			void * result;
 			result=cheri_setaddress(ptr, new_addr);
-			//assert(cheri_gettag(result) != 1);
 			return result;
 		}
 		else {
-			//assert(cheri_gettag(new_addr) != 1);
-			//RTE_LOG(ERR, EAL, "Tag on entry\n");
-			void * result;
-			result=cheri_setaddress(ptr, new_addr);
-			assert(cheri_gettag(result) != 0);
-			return result;
+			return cheri_setaddress(ptr, new_addr);
 		}
 	}
 	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
@@ -72,12 +58,10 @@ void *stack_add3[MAX_BACKTRACE];
 	{
 		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
 		if (cheri_gettag(ptr) != 1){
-			//RTE_LOG(ERR, EAL, "No tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 		else {
 			assert(cheri_gettag(new_addr) != 1);
-			////RTE_LOG(ERR, EAL, "Tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 	}
@@ -259,10 +243,8 @@ find_biggest_element(struct malloc_heap *heap, size_t *size,
 			} else {
 				void *data_start = RTE_PTR_ADD(elem,
 						MALLOC_ELEM_HEADER_LEN);
-						//assert(cheri_gettag(data_start) != 1);
 				void *data_end = RTE_PTR_ADD(elem, elem->size -
 						MALLOC_ELEM_TRAILER_LEN);
-						//assert(cheri_gettag(data_end) != 1);
 				void *aligned = RTE_PTR_ALIGN_CEIL(data_start,
 						align);
 				/* check if aligned data start is beyond end */
@@ -919,7 +901,6 @@ malloc_heap_free(struct malloc_elem *elem)
 	len = elem->size;
 	aligned_start = RTE_PTR_ALIGN_CEIL(start, page_sz);
 	end = RTE_PTR_ADD(elem, len);
-	//assert(cheri_gettag(end) != 1);
 	aligned_end = RTE_PTR_ALIGN_FLOOR(end, page_sz);
 
 	aligned_len = RTE_PTR_DIFF(aligned_end, aligned_start);
@@ -939,7 +920,6 @@ malloc_heap_free(struct malloc_elem *elem)
 		if (tmp->flags & RTE_MEMSEG_FLAG_DO_NOT_FREE) {
 			/* this is an unfreeable segment, so move start */
 			aligned_start = RTE_PTR_ADD(tmp->addr, tmp->len);
-			//assert(cheri_gettag(aligned_start) != 1);
 		}
 	}
 
@@ -968,7 +948,6 @@ malloc_heap_free(struct malloc_elem *elem)
 
 		/* move start */
 		aligned_start = RTE_PTR_ADD(aligned_start, page_sz);
-		//assert(cheri_gettag(aligned_start) != 1);
 		aligned_len -= page_sz;
 		n_segs--;
 	}
@@ -1185,7 +1164,6 @@ malloc_heap_create_external_seg(void *va_addr, rte_iova_t iova_addrs[],
 		rte_fbarray_set_used(arr, i);
 		ms = rte_fbarray_get(arr, i);
 		ms->addr = RTE_PTR_ADD(va_addr, i * page_sz);
-		//assert(cheri_gettag(ms->addr) != 1);
 		ms->iova = iova_addrs == NULL ? RTE_BAD_IOVA : iova_addrs[i];
 		ms->hugepage_sz = page_sz;
 		ms->len = page_sz;
@@ -1401,15 +1379,6 @@ rte_eal_malloc_heap_init(void)
 	/* secondary process does not need to initialize anything */
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
-
-	if (cheri_gettag(malloc_add_seg) != 1)
-	{
-		printf("malloc_add_seg has no tag \n");
-	}
-	else
-	{
-		printf("malloc_add_seg has tag \n");
-	}
 	/* add all IOVA-contiguous areas to the heap */
 	return rte_memseg_contig_walk(malloc_add_seg, NULL);
 }

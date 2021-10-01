@@ -240,66 +240,6 @@ rte_eal_config_create(void)
 		mem_cfg_fd = -1;
 		return -1;
 	}
-	/* remap the actual file into the space we've just reserved */
-	/*#if __has_feature(capabilities)
-		//mapped_mem_cfg_addr = mmap(NULL,PAGE_SSIZE, PROT_READ | PROT_WRITE,
-		//	MAP_ANON | MAP_ALIGNED_CHERI, mem_cfg_fd, 0);
-
-	    	mapped_mem_cfg_addr = mmap(NULL,
-			cfg_len_aligned, PROT_READ | PROT_WRITE,
-			MAP_SHARED | MAP_FIXED | MAP_CHERI_NOSETBOUNDS, mem_cfg_fd, 0);
-		RTE_LOG(ERR, EAL, " capability mapped_mem_cfg_addr %p (size = 0x%zx)  \n\n",
-		mapped_mem_cfg_addr, test_size);
-		if (cheri_gettag(rte_mem_cfg_addr) != 1)
-		{
-			printf("rte_mem_cfg_addr has no tag \n");
-		}
-		else
-		{
-			printf("rte_mem_cfg_addr has tag \n");
-		}
-
-	#else
-		mapped_mem_cfg_addr = mmap(rte_mem_cfg_addr,
-			cfg_len_aligned, PROT_READ | PROT_WRITE,
-			MAP_SHARED | MAP_FIXED, mem_cfg_fd, 0);
-		RTE_LOG(ERR, EAL, "mapped_mem_cfg_addr %p (size = 0x%zx)  \n\n",
-		mapped_mem_cfg_addr, cfg_len_aligned);
-	#endif
-	if (mapped_mem_cfg_addr == MAP_FAILED) {
-		RTE_LOG(ERR, EAL, "Cannot remap memory for rte_config\n");
-		munmap(rte_mem_cfg_addr, cfg_len);
-		close(mem_cfg_fd);
-		mem_cfg_fd = -1;
-		return -1;
-	}*/
-
-	/*if (cheri_gettag(rte_mem_cfg_addr) != 1)
-	{
-		printf("rte_mem_cfg_addr2 has no tag \n");
-	}
-	else
-	{
-		printf("rte_mem_cfg_addr2 has tag \n");
-	}
-	if (cheri_gettag(config->mem_config) != 1)
-	{
-		printf("config->mem_config has no tag \n");
-	}
-	else
-	{
-		printf("config->mem_config has tag \n");
-	}
-	uintmax_t permissions;
-	permissions=cheri_getperm(rte_mem_cfg_addr);
-	if (permissions & CHERI_PERM_CHERIABI_VMMAP)
-		printf("CHERI_PERM_CHERIABI_VMMAP1 set  \n");
-
-	permissions=cheri_getperm(config->mem_config);
-	if (permissions & CHERI_PERM_CHERIABI_VMMAP)
-		printf("CHERI_PERM_CHERIABI_VMMAP set in config \n");
-	if (permissions & CHERI_PERM_EXECUTE)
-		printf("CHERI_PERM_CHERIABI set in config \n");*/
 	memcpy(rte_mem_cfg_addr, config->mem_config, sizeof(struct rte_mem_config));
 	config->mem_config = rte_mem_cfg_addr;
 
@@ -787,7 +727,6 @@ rte_eal_init(int argc, char **argv)
 		rte_eal_init_alert("Cannot init config");
 		return -1;
 	}
-	//FOUND;
 
 	if (rte_eal_intr_init() < 0) {
 		rte_eal_init_alert("Cannot init interrupt-handling thread");
@@ -874,49 +813,43 @@ rte_eal_init(int argc, char **argv)
 		rte_errno = ENODEV;
 		return -1;
 	}
-	//FOUND;
 
 	if (rte_eal_memory_init() < 0) {
 		rte_eal_init_alert("Cannot init memory");
 		rte_errno = ENOMEM;
 		return -1;
 	}
-	//FOUND;
 
 	if (rte_eal_malloc_heap_init() < 0) {
 		rte_eal_init_alert("Cannot init malloc heap");
 		rte_errno = ENODEV;
 		return -1;
 	}
-	//FOUND;
 
 	if (rte_eal_tailqs_init() < 0) {
 		rte_eal_init_alert("Cannot init tail queues for objects");
 		rte_errno = EFAULT;
 		return -1;
 	}
-	//FOUND;
 
 	if (rte_eal_timer_init() < 0) {
 		rte_eal_init_alert("Cannot init HPET or TSC timers");
 		rte_errno = ENOTSUP;
 		return -1;
 	}
-	//FOUND;
 	eal_check_mem_on_local_socket();
-	//FOUND;
+
 	if (pthread_setaffinity_np(pthread_self(), sizeof(rte_cpuset_t),
 			&lcore_config[config->main_lcore].cpuset) != 0) {
 		rte_eal_init_alert("Cannot set affinity");
 		rte_errno = EINVAL;
 		return -1;
 	}
-	//FOUND;
 	__rte_thread_init(config->main_lcore,
 		&lcore_config[config->main_lcore].cpuset);
-	//FOUND;
+
 	ret = eal_thread_dump_current_affinity(cpuset, sizeof(cpuset));
-	//FOUND;
+
 	RTE_LOG(DEBUG, EAL, "Main lcore %u is ready (tid=%p;cpuset=[%s%s])\n",
 		config->main_lcore, thread_id, cpuset,
 		ret == 0 ? "" : "...");
@@ -950,14 +883,12 @@ rte_eal_init(int argc, char **argv)
 		if (ret != 0)
 			rte_panic("Cannot set affinity\n");
 	}
-	//FOUND;
 	/*
 	 * Launch a dummy function on all worker lcores, so that main lcore
 	 * knows they are all ready when this function returns.
 	 */
 	rte_eal_mp_remote_launch(sync_func, NULL, SKIP_MAIN);
 	rte_eal_mp_wait_lcore();
-	//FOUND;
 	/* initialize services so vdevs register service during bus_probe. */
 	ret = rte_service_init();
 	if (ret) {
@@ -965,14 +896,12 @@ rte_eal_init(int argc, char **argv)
 		rte_errno = -ret;
 		return -1;
 	}
-	//FOUND;
 	/* Probe all the buses and devices/drivers on them */
 	if (rte_bus_probe()) {
 		rte_eal_init_alert("Cannot probe devices");
 		rte_errno = ENOTSUP;
 		return -1;
 	}
-	//FOUND;
 	/* initialize default service/lcore mappings and start running. Ignore
 	 * -ENOTSUP, as it indicates no service coremask passed to EAL.
 	 */
@@ -981,7 +910,6 @@ rte_eal_init(int argc, char **argv)
 		rte_errno = -ret;
 		return -1;
 	}
-	//FOUND;
 
 	/*
 	 * Clean up unused files in runtime directory. We do this at the end of
@@ -997,7 +925,7 @@ rte_eal_init(int argc, char **argv)
 		rte_eal_init_alert("Cannot clear runtime directory");
 		return -1;
 	}
-	//FOUND;
+
 	if (!internal_conf->no_telemetry) {
 		const char *error_str = NULL;
 		if (rte_telemetry_init(rte_eal_get_runtime_dir(),
@@ -1011,7 +939,6 @@ rte_eal_init(int argc, char **argv)
 	}
 
 	eal_mcfg_complete();
-	//FOUND;
 
 	return fctret;
 }

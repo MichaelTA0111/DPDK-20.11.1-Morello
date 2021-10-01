@@ -25,9 +25,6 @@
 #include "malloc_heap.h"
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
-#include <execinfo.h>
-#define MAX_BACKTRACE 8
-void *stack_add2[MAX_BACKTRACE];
 
 #define PYTILIA_IS_TAGGED(_ptr) \
 +	printf("%s: %s %p tagged? %s\n", __FUNCTION__, #_ptr, _ptr, cheri_gettag(_ptr) ? "Y" : "N");
@@ -36,27 +33,16 @@ void *stack_add2[MAX_BACKTRACE];
 	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
 	{
 		int i;
-		//RTE_LOG(ERR, EAL, "Using Add ptr %p\n",ptr);
-	//	size_t res = backtrace(stack_add2, MAX_BACKTRACE);
-	//	for (i = 0; i < res; i++) {
-	//	printf("%d: %p\n", i, stack_add2[i]);
-	//	}
 		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
 		if (cheri_gettag(ptr) != 1){
 			RTE_LOG(ERR, EAL, "No tag on entry\n");
 			abort();
 			void * result;
 			result=cheri_setaddress(ptr, new_addr);
-			//assert(cheri_gettag(result) != 1);
 			return result;
 		}
 		else {
-			//assert(cheri_gettag(new_addr) != 1);
-			//RTE_LOG(ERR, EAL, "Tag on entry\n");
-			void * result;
-			result=cheri_setaddress(ptr, new_addr);
-			assert(cheri_gettag(result) != 0);
-			return result;
+			return cheri_setaddress(ptr, new_addr);
 		}
 	}
 	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
@@ -64,12 +50,10 @@ void *stack_add2[MAX_BACKTRACE];
 	{
 		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
 		if (cheri_gettag(ptr) != 1){
-			//RTE_LOG(ERR, EAL, "No tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 		else {
 			assert(cheri_gettag(new_addr) != 1);
-			////RTE_LOG(ERR, EAL, "Tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 	}

@@ -29,8 +29,6 @@
 #include "malloc_heap.h"
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
-#include <cheri/cherireg.h>
-#include <execinfo.h>
 
 #define PYTILIA_IS_TAGGED(_ptr) \
 	printf("%s: %s %p tagged? %s\n", __FUNCTION__, #_ptr, _ptr, cheri_gettag(_ptr) ? "Y" : "N");
@@ -41,9 +39,6 @@
  * 0. In this case, return NULL. Note: this function returns an address
  * which is a multiple of hugepage size.
  */
-#include <execinfo.h>
-#define MAX_BACKTRACE 8
-void *stack_add1[MAX_BACKTRACE];
 
 
 /*Redefine the PTR_ADD function when compiling purecapability code*/
@@ -51,27 +46,15 @@ void *stack_add1[MAX_BACKTRACE];
 	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
 	{
 		int i;
-		//RTE_LOG(ERR, EAL, "Using Add ptr %p\n",ptr);
-		//size_t res = backtrace(stack_add1, MAX_BACKTRACE);
-	//	for (i = 0; i < res; i++) {
-	//	printf("%d: %p\n", i, stack_add1[i]);
-	//	}
 		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
 		if (cheri_gettag(ptr) != 1){
-			RTE_LOG(ERR, EAL, "No tag on entry\n");
 			abort();
 			void * result;
 			result=cheri_setaddress(ptr, new_addr);
-			//assert(cheri_gettag(result) != 1);
 			return result;
 		}
 		else {
-			//assert(cheri_gettag(new_addr) != 1);
-			//RTE_LOG(ERR, EAL, "Tag on entry\n");
-			void * result;
-			result=cheri_setaddress(ptr, new_addr);
-			assert(cheri_gettag(result) != 0);
-			return result;
+			return cheri_setaddress(ptr, new_addr);
 		}
 	}
 	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
@@ -79,12 +62,9 @@ void *stack_add1[MAX_BACKTRACE];
 	{
 		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
 		if (cheri_gettag(ptr) != 1){
-			//RTE_LOG(ERR, EAL, "No tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 		else {
-			//assert(cheri_gettag(new_addr) != 1);
-			////RTE_LOG(ERR, EAL, "Tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 	}
@@ -126,14 +106,6 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 			}
 
 #endif
-#if 0
-	(requested_addr == NULL && next_baseaddr != NULL) {
-		requested_addr = next_baseaddr;
-		requested_addr = RTE_PTR_ALIGN(requested_addr, page_sz);
-		addr_is_hint = true;
-	}
-#endif
-
 
 	requested_addr=NULL;
 	/* we don't need alignment of resulting pointer in the following cases:
@@ -162,11 +134,7 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 			requested_addr, (size_t)map_sz, reserve_flags);
 		if ((mapped_addr == NULL) && allow_shrink)
 		{
-			/*if (cheri_gettag(mapped_addr) != 0)
-			{
-				printf("mapped_addr2 has tag \n");
-			}*/
-				*size -= page_sz;
+			*size -= page_sz;
 		}
 
 
@@ -334,8 +302,6 @@ eal_memseg_list_populate(struct rte_memseg_list *msl, void *addr, int n_segs)
 		}
 		else
 			ms->iova = RTE_BAD_IOVA;
-	//	RTE_LOG(ERR, EAL, "i ========= =%d of nseg  %d\n",
-	//		i, n_segs);
 		ms->hugepage_sz = page_sz;
 		ms->socket_id = 0;
 		ms->len = page_sz;
@@ -724,7 +690,6 @@ rte_memseg_contig_walk_thread_unsafe(rte_memseg_contig_walk_t func, void *arg)
 		struct rte_memseg_list *msl = &mcfg->memsegs[i];
 		const struct rte_memseg *ms;
 		struct rte_fbarray * __capability arr;
-		//struct rte_fbarray * arr;
 
 		if (msl->memseg_arr.count == 0)
 			continue;
@@ -786,14 +751,6 @@ rte_memseg_walk_thread_unsafe(rte_memseg_walk_t func, void *arg)
 		ms_idx = rte_fbarray_find_next_used(arr, 0);
 		while (ms_idx >= 0) {
 			ms = rte_fbarray_get(arr, ms_idx);
-			if (cheri_gettag(ms) != 1)
-			{
-				printf("ms3 has no tag \n");
-			}
-			else
-			{
-				printf("ms3 has tag \n");
-			}
 			ret = func(msl, ms, arg);
 			if (ret)
 				return ret;
@@ -1072,32 +1029,24 @@ rte_eal_memory_init(void)
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-		//FOUND;
 	int retval;
 	RTE_LOG(DEBUG, EAL, "Setting up physically contiguous memory...\n");
-	//FOUND;
 	if (!mcfg)
 		return -1;
 
 	/* lock mem hotplug here, to prevent races while we init */
 	rte_mcfg_mem_read_lock();
-	//FOUND;
 	if (rte_eal_memseg_init() < 0)
 		goto fail;
-	//FOUND;
 	if (eal_memalloc_init() < 0)
 		goto fail;
-	//FOUND;
 	retval = rte_eal_process_type() == RTE_PROC_PRIMARY ?
 			rte_eal_hugepage_init() :
 			rte_eal_hugepage_attach();
-			//FOUND;
 	if (retval < 0)
 		goto fail;
-	//FOUND;
 	if (internal_conf->no_shconf == 0 && rte_eal_memdevice_init() < 0)
 		goto fail;
-	//FOUND;
 	return 0;
 fail:
 	rte_mcfg_mem_read_unlock();

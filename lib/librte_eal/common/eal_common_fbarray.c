@@ -40,27 +40,16 @@ void *stack_add[MAX_BACKTRACE];
 	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
 	{
 		int i;
-		//RTE_LOG(ERR, EAL, "Using Add ptr %p\n",ptr);
-		//size_t res = backtrace(stack_add, MAX_BACKTRACE);
-		//for (i = 0; i < res; i++) {
-		//printf("%d: %p\n", i, stack_add[i]);
-		//}
 		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
 		if (cheri_gettag(ptr) != 1){
 			RTE_LOG(ERR, EAL, "No tag on entry\n");
 			abort();
 			void * result;
 			result=cheri_setaddress(ptr, new_addr);
-			//assert(cheri_gettag(result) != 1);
 			return result;
 		}
 		else {
-			//assert(cheri_gettag(new_addr) != 1);
-			//RTE_LOG(ERR, EAL, "Tag on entry\n");
-			void * result;
-			result=cheri_setaddress(ptr, new_addr);
-			assert(cheri_gettag(result) != 0);
-			return result;
+			return cheri_setaddress(ptr, new_addr);
 		}
 	}
 	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
@@ -68,12 +57,10 @@ void *stack_add[MAX_BACKTRACE];
 	{
 		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
 		if (cheri_gettag(ptr) != 1){
-			//RTE_LOG(ERR, EAL, "No tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 		else {
 			assert(cheri_gettag(new_addr) != 1);
-			////RTE_LOG(ERR, EAL, "Tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 	}
@@ -154,10 +141,8 @@ static int
 overlap(const struct mem_area *ma, const void *start, size_t len)
 {
 	const void *end = RTE_PTR_ADD(start, len);
-	//assert(cheri_gettag(end) != 1);
 	const void *ma_start = ma->addr;
 	const void *ma_end = RTE_PTR_ADD(ma->addr, ma->len);
-	//assert(cheri_gettag(ma_end) != 1);
 
 	/* start overlap? */
 	if (start >= ma_start && start < ma_end)
@@ -174,7 +159,6 @@ find_next_n(const struct rte_fbarray *arr, unsigned int start, unsigned int n,
 {
 	const struct used_mask *msk = get_used_mask(arr->data, arr->elt_sz,
 			arr->len);
-			//assert(cheri_gettag(msk) != 1);
 	unsigned int msk_idx, lookahead_idx, first, first_mod;
 	unsigned int last, last_mod;
 	uint64_t last_msk, ignore_msk;
@@ -322,7 +306,6 @@ find_next(const struct rte_fbarray *arr, unsigned int start, bool used)
 {
 	const struct used_mask *msk = get_used_mask(arr->data, arr->elt_sz,
 			arr->len);
-			//assert(cheri_gettag(msk) != 1);
 	unsigned int idx, first, first_mod;
 	unsigned int last, last_mod;
 	uint64_t last_msk, ignore_msk;
@@ -378,7 +361,6 @@ find_contig(const struct rte_fbarray *arr, unsigned int start, bool used)
 {
 	const struct used_mask *msk = get_used_mask(arr->data, arr->elt_sz,
 			arr->len);
-			//assert(cheri_gettag(msk) != 1);
 	unsigned int idx, first, first_mod;
 	unsigned int last, last_mod;
 	uint64_t last_msk;
@@ -440,7 +422,6 @@ find_prev_n(const struct rte_fbarray *arr, unsigned int start, unsigned int n,
 {
 	const struct used_mask *msk = get_used_mask(arr->data, arr->elt_sz,
 			arr->len);
-			//assert(cheri_gettag(msk) != 1);
 	unsigned int msk_idx, lookbehind_idx, first, first_mod;
 	uint64_t ignore_msk;
 
@@ -604,7 +585,6 @@ find_prev(const struct rte_fbarray *arr, unsigned int start, bool used)
 {
 	const struct used_mask *msk = get_used_mask(arr->data, arr->elt_sz,
 			arr->len);
-			//assert(cheri_gettag(msk) != 1);
 	unsigned int idx, first, first_mod;
 	uint64_t ignore_msk;
 	/*
@@ -658,7 +638,6 @@ find_rev_contig(const struct rte_fbarray *arr, unsigned int start, bool used)
 {
 	const struct used_mask *msk = get_used_mask(arr->data, arr->elt_sz,
 			arr->len);
-			//assert(cheri_gettag(msk) != 1);
 	unsigned int idx, first, first_mod;
 	unsigned int need_len, result = 0;
 	first = MASK_LEN_TO_IDX(start);
@@ -721,7 +700,6 @@ set_used(struct rte_fbarray *arr, unsigned int idx, bool used)
 		return -1;
 	}
 	msk = get_used_mask(arr->data, arr->elt_sz, arr->len);
-//	assert(cheri_gettag(msk) != 1);
 	ret = 0;
 
 	/* prevent array from changing under us */
@@ -798,20 +776,11 @@ rte_fbarray_init(struct rte_fbarray *arr, const char *name, unsigned int len,
 	mmap_len = calc_data_size(page_sz, elt_sz, len);
 
 	data = eal_get_virtual_area(NULL, &mmap_len, page_sz, 0, 0);
-	//data=mmap(NULL,mmap_len,PROT_READ|PROT_WRITE|PROT_EXEC,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
 	if (data == MAP_FAILED) {
 		perror("mmap() error=");
 		printf("%s():%i: Failed to create dummy memory area\n",
 			__func__, __LINE__);
 		return -1;
-	}
-	if (cheri_gettag(data)!=1)
-	{
-		printf("data value %p has no tag mmap_len %zu   %zu \n",data, mmap_len,&mmap_len);
-	}
-	else
-	{
-		printf("data value %p has tag mmap_len %zu    %zu  \n",data,mmap_len,&mmap_len);
 	}
 	if (data == NULL) {
 		free(ma);
@@ -1127,7 +1096,6 @@ void *
 rte_fbarray_get(const struct rte_fbarray *arr, unsigned int idx)
 {
 	void *__capability ret = NULL;
-	//void *ret = NULL;
 	if (arr == NULL) {
 		rte_errno = EINVAL;
 		return NULL;
@@ -1138,10 +1106,6 @@ rte_fbarray_get(const struct rte_fbarray *arr, unsigned int idx)
 	}
 
 	ret = RTE_PTR_ADD(arr->data, idx * arr->elt_sz);
-//	void *new_addr;
-	//cheri_setaddress(ret, new_addr);
-//	assert(cheri_gettag(new_addr) != 1);
-//	return cheri_setaddress(ret, new_addr);
 	return ret;
 }
 
@@ -1173,7 +1137,6 @@ rte_fbarray_is_used(struct rte_fbarray *arr, unsigned int idx)
 	rte_rwlock_read_lock(&arr->rwlock);
 
 	msk = get_used_mask(arr->data, arr->elt_sz, arr->len);
-	//assert(cheri_gettag(msk) != 1);
 	msk_idx = MASK_LEN_TO_IDX(idx);
 	msk_bit = 1ULL << MASK_LEN_TO_MOD(idx);
 
@@ -1528,7 +1491,6 @@ rte_fbarray_find_idx(const struct rte_fbarray *arr, const void *elt)
 		return -1;
 	}
 	end = RTE_PTR_ADD(arr->data, arr->elt_sz * arr->len);
-	//assert(cheri_gettag(end) != 1);
 	if (elt < arr->data || elt >= end) {
 		rte_errno = EINVAL;
 		return -1;
@@ -1562,7 +1524,6 @@ rte_fbarray_dump_metadata(struct rte_fbarray *arr, FILE *f)
 			arr->len, arr->count, arr->elt_sz);
 
 	msk = get_used_mask(arr->data, arr->elt_sz, arr->len);
-	//assert(cheri_gettag(msk) != 1);
 
 	for (i = 0; i < msk->n_masks; i++)
 		fprintf(f, "msk idx %i: 0x%016" PRIx64 "\n", i, msk->data[i]);

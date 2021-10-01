@@ -23,10 +23,6 @@
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
 
-#include <execinfo.h>
-#define MAX_BACKTRACE 8
-void *stack_add5[MAX_BACKTRACE];
-
 #define PYTILIA_IS_TAGGED(_ptr) \
 	printf("%s: %s %p tagged? %s\n", __FUNCTION__, #_ptr, _ptr, cheri_gettag(_ptr) ? "Y" : "N");
 /*Redefine the PTR_ADD function when compiling purecapability code*/
@@ -34,27 +30,15 @@ void *stack_add5[MAX_BACKTRACE];
 	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
 	{
 		int i;
-		//RTE_LOG(ERR, EAL, "Using Add ptr %p\n",ptr);
-	//	size_t res = backtrace(stack_add5, MAX_BACKTRACE);
-	//	for (i = 0; i < res; i++) {
-	//	printf("%d: %p\n", i, stack_add5[i]);
-	//	}
 		vaddr_t *new_addr = ((vaddr_t)ptr) + x;
 		if (cheri_gettag(ptr) != 1){
-			RTE_LOG(ERR, EAL, "No tag on entry\n");
 			abort();
 			void * result;
 			result=cheri_setaddress(ptr, new_addr);
-			//assert(cheri_gettag(result) != 1);
 			return result;
 		}
 		else {
-			//assert(cheri_gettag(new_addr) != 1);
-			//RTE_LOG(ERR, EAL, "Tag on entry\n");
-			void * result;
-			result=cheri_setaddress(ptr, new_addr);
-			assert(cheri_gettag(result) != 0);
-			return result;
+			return cheri_setaddress(ptr, new_addr);
 		}
 	}
 	#define RTE_PTR_ADD(ptr, x) cheri_ptr_add(ptr, x)
@@ -62,12 +46,10 @@ void *stack_add5[MAX_BACKTRACE];
 	{
 		vaddr_t *new_addr = ((vaddr_t)ptr) - x;
 		if (cheri_gettag(ptr) != 1){
-			//RTE_LOG(ERR, EAL, "No tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 		else {
 			assert(cheri_gettag(new_addr) != 1);
-			////RTE_LOG(ERR, EAL, "Tag on entry\n");
 			return cheri_setaddress(ptr, new_addr);
 		}
 	}
@@ -112,7 +94,6 @@ rte_eal_hugepage_init(void)
 	struct rte_mem_config *mcfg;
 	uint64_t total_mem = 0;
 	void *__capability addr;
-	//void *addr;
 	unsigned int i, j, seg_idx = 0;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
@@ -149,7 +130,6 @@ rte_eal_hugepage_init(void)
 		msl->len = mem_sz;
 		PYTILIA_IS_TAGGED(addr);
 		eal_memseg_list_populate(msl, addr, n_segs);
-		//FOUND;
 		return 0;
 	}
 
@@ -243,14 +223,6 @@ rte_eal_hugepage_init(void)
 			/* address is already mapped in memseg list, so using
 			 * MAP_FIXED here is safe.
 			 */
-			if (cheri_gettag(addr) != 1)
-			{
-				printf("addr has no tag \n");
-			}
-			else
-			{
-				printf("addr has tag \n");
-			}
 			addr = mmap(addr, page_sz, PROT_READ|PROT_WRITE,
 					MAP_SHARED | MAP_FIXED,
 					hpi->lock_descriptor,
@@ -262,16 +234,6 @@ rte_eal_hugepage_init(void)
 			}
 
 			seg->addr = addr;
-
-			if (cheri_gettag(addr) != 1)
-			{
-				printf("addrafter map  has no tag \n");
-			}
-			else
-			{
-				printf("addr after map has tag seg Addr %p, seg %p \n", seg->addr, seg);
-			}
-
 			seg->iova = physaddr;
 			seg->hugepage_sz = page_sz;
 			seg->len = page_sz;
@@ -297,15 +259,6 @@ rte_eal_hugepage_init(void)
 				internal_conf->memory >> 20, total_mem >> 20);
 		return -1;
 	}
-	if (cheri_gettag(addr) != 1)
-	{
-		printf("addr7 map  has no tag \n");
-	}
-	else
-	{
-		printf("addr 7 map has tag \n");
-	}
-
 	return 0;
 }
 
@@ -340,14 +293,12 @@ rte_eal_hugepage_attach(void)
 	unsigned int i;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-	//FOUND;
 	hpi = &internal_conf->hugepage_info[0];
 	for (i = 0; i < internal_conf->num_hugepage_sizes; i++) {
 		const struct hugepage_info *cur_hpi = &hpi[i];
 		struct attach_walk_args wa;
 
 		memset(&wa, 0, sizeof(wa));
-	//	FOUND;
 		/* Obtain a file descriptor for contiguous memory */
 		fd_hugepage = open(cur_hpi->hugedir, O_RDWR);
 		if (fd_hugepage < 0) {
@@ -355,21 +306,17 @@ rte_eal_hugepage_attach(void)
 					cur_hpi->hugedir);
 			goto error;
 		}
-		//FOUND;
 		wa.fd_hugepage = fd_hugepage;
 		wa.seg_idx = 0;
-		//FOUND;
 		/* Map the contiguous memory into each memory segment */
 		if (rte_memseg_walk(attach_segment, &wa) < 0) {
 			RTE_LOG(ERR, EAL, "Failed to mmap buffer %u from %s\n",
 				wa.seg_idx, cur_hpi->hugedir);
 			goto error;
 		}
-		//FOUND;
 		close(fd_hugepage);
 		fd_hugepage = -1;
 	}
-	//FOUND;
 	/* hugepage_info is no longer required */
 	return 0;
 

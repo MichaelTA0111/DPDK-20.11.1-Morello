@@ -84,7 +84,7 @@ const struct feature_entry rte_cpu_feature_table[] = {
 #elif defined RTE_ARCH_ARM64
 #define PLATFORM_STR "aarch64"
 #if 1
-// Just to build this, don't expect ot use it
+/* Just to build this, don't expect ot use it*/
 typedef uint64_t _Elfx_auxv_t;
 #else
 typedef Elf64_auxv_t _Elfx_auxv_t;

@@ -10,7 +10,6 @@ get_tsc_freq_arch(void)
 {
 #if defined RTE_ARCH_ARM64 && !defined RTE_ARM_EAL_RDTSC_USE_PMU
 	return 0;
-	//return __rte_arm64_cntfrq();
 #elif defined RTE_ARCH_ARM64 && defined RTE_ARM_EAL_RDTSC_USE_PMU
 #define CYC_PER_1MHZ 1E6
 	/* Use the generic counter ticks to calculate the PMU
