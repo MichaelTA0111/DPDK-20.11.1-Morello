@@ -182,6 +182,8 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 	} else if (next_baseaddr != NULL) {
 		next_baseaddr = RTE_PTR_ADD(aligned_addr, *size);
 	}
+	RTE_LOG(DEBUG, EAL, "Virtual Aligned address is %p (size = 0x%zx)\n",
+	aligned_addr, *size);
 	if (unmap) {
 		eal_mem_free(mapped_addr, map_sz);
 	} else if (!no_align) {
@@ -212,8 +214,7 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 		/* Exclude these pages from a core dump. */
 		eal_mem_set_dump(aligned_addr, *size, false);
 	}
-	RTE_LOG(ERR, EAL, "Virtual Aligned address is %p (size = 0x%zx)\n",
-		aligned_addr, *size);
+
 	return aligned_addr;
 }
 

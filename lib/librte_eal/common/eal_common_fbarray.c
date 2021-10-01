@@ -26,6 +26,7 @@
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
 
+
 #define MASK_SHIFT 6ULL
 #define MASK_ALIGN (1ULL << MASK_SHIFT)
 #define MASK_LEN_TO_IDX(x) ((x) >> MASK_SHIFT)

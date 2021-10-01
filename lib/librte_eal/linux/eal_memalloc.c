@@ -510,7 +510,6 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 	void *new_addr;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-	RTE_LOG(INFO, EAL, "In alloc seg\n");
 	alloc_sz = hi->hugepage_sz;
 
 	/* these are checked at init, but code analyzers don't know that */
@@ -1140,7 +1139,6 @@ sync_chunk(struct rte_memseg_list *primary_msl,
 
 	l_arr = &local_msl->memseg_arr;
 	p_arr = &primary_msl->memseg_arr;
-	RTE_LOG(INFO, EAL, "In sync chunk\n");
 	/* we need to aggregate allocations/deallocations into bigger chunks,
 	 * as we don't want to spam the user with per-page callbacks.
 	 *

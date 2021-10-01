@@ -11,10 +11,7 @@
 
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
-#include <execinfo.h>
 
-#define MAX_BACKTRACE 8
-void *stack_addresses[MAX_BACKTRACE];
 /*Redefine the PTR_ADD function when compiling purecapability code*/
 #if __has_feature(capabilities)
 	static inline void * cheri_ptr_add(void * ptr, unsigned long x)

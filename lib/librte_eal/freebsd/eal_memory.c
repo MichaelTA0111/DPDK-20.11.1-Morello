@@ -61,14 +61,12 @@
 
 uint64_t eal_get_baseaddr(void)
 {
-	void * address;
-	address= 0x1000000000ULL;
 	/*
 	 * FreeBSD may allocate something in the space we will be mapping things
 	 * before we get a chance to do that, so use a base address that's far
 	 * away from where malloc() et al usually map things.
 	 */
-	return address;
+	return 0x1000000000ULL;
 }
 
 /*
@@ -115,7 +113,6 @@ rte_eal_hugepage_init(void)
 
 		if (eal_memseg_list_init_named(
 				msl, "nohugemem", page_sz, n_segs, 0, true)) {
-				RTE_LOG(ERR, EAL, "eal_memseg_list_init_named return -1\n");
 			return -1;
 		}
 		addr = mmap(NULL, mem_sz, PROT_READ | PROT_WRITE,

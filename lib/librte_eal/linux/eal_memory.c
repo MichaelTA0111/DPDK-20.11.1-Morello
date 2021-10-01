@@ -673,7 +673,6 @@ remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 	uint64_t page_sz;
 	size_t memseg_len;
 	int socket_id;
-	RTE_LOG(INFO, EAL, "In remap segment\n",)
 #ifndef RTE_ARCH_64
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();

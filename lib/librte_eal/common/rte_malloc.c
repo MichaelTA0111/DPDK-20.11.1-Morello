@@ -195,7 +195,6 @@ void *
 rte_realloc_socket(void *ptr, size_t size, unsigned int align, int socket)
 {
 	if (ptr == NULL)
-		RTE_LOG(ERR, EAL, "ptr=NULL\n");
 		return rte_malloc_socket(NULL, size, align, socket);
 
 	struct malloc_elem *elem = malloc_elem_from_data(ptr);
@@ -213,7 +212,6 @@ rte_realloc_socket(void *ptr, size_t size, unsigned int align, int socket)
 	     (unsigned int)socket == elem->heap->socket_id) &&
 			RTE_PTR_ALIGN(ptr, align) == ptr &&
 			malloc_heap_resize(elem, size) == 0) {
-				RTE_LOG(ERR, EAL, "Checking socket\n");
 		rte_eal_trace_mem_realloc(size, align, socket, ptr);
 		return ptr;
 	}
