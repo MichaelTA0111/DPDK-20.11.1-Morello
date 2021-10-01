@@ -25,9 +25,6 @@
 #include "rte_fbarray.h"
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
-#include <execinfo.h>
-#define MAX_BACKTRACE 8
-void *stack_add[MAX_BACKTRACE];
 
 #define MASK_SHIFT 6ULL
 #define MASK_ALIGN (1ULL << MASK_SHIFT)
