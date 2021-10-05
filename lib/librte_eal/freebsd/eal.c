@@ -187,7 +187,7 @@ rte_eal_config_create(void)
 	size_t page_sz = sysconf(_SC_PAGE_SIZE);
 	size_t cfg_len = sizeof(struct rte_mem_config);
 	size_t cfg_len_aligned = RTE_ALIGN(cfg_len, page_sz);
-	void *rte_mem_cfg_addr, *mapped_mem_cfg_addr;
+	void *rte_mem_cfg_addr;
 	int retval;
 
 	const char *pathname = eal_runtime_config_path();
@@ -242,7 +242,6 @@ rte_eal_config_create(void)
 	}
 	memcpy(rte_mem_cfg_addr, config->mem_config, sizeof(struct rte_mem_config));
 	config->mem_config = rte_mem_cfg_addr;
-
 	/* store address of the config in the config itself so that secondary
 	 * processes could later map the config into this exact location
 	 */
@@ -259,8 +258,6 @@ rte_eal_config_attach(void)
 	struct rte_config *config = rte_eal_get_configuration();
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
-
-
 	if (internal_conf->no_shconf)
 		return 0;
 
