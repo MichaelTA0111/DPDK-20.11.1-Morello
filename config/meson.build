@@ -105,7 +105,9 @@ toolchain = cc.get_id()
 dpdk_conf.set_quoted('RTE_TOOLCHAIN', toolchain)
 dpdk_conf.set('RTE_TOOLCHAIN_' + toolchain.to_upper(), 1)
 
-dpdk_conf.set('RTE_ARCH_64', cc.sizeof('void *') == 8)
+# The size of a void pointer is 16 bytes in the 64-bit Morello architecture
+# dpdk_conf.set('RTE_ARCH_64', cc.sizeof('void *') == 8)
+dpdk_conf.set('RTE_ARCH_64', cc.sizeof('void *') == 16)
 dpdk_conf.set('RTE_ARCH_32', cc.sizeof('void *') == 4)
 
 if not is_windows
