@@ -91,7 +91,7 @@ flags_n1generic_extra = [
 	['RTE_LIBRTE_VHOST_NUMA', false]]
 
 machine_args_generic = [
-	['default', ['-march=armv8-a+crc', '-moutline-atomics']],
+	['default', ['-march=morello+c64', '-mabi=purecap', '-mno-outline-atomics']],
 	['native', ['-march=native']],
 	['0xd03', ['-mcpu=cortex-a53']],
 	['0xd04', ['-mcpu=cortex-a35']],
