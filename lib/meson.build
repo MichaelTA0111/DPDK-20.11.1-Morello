@@ -51,7 +51,7 @@ endif
 default_cflags = machine_args
 default_cflags += ['-DALLOW_EXPERIMENTAL_API']
 default_cflags += ['-DALLOW_INTERNAL_API']
-default_cflags += ['-femulated-tls','-g']
+default_cflags += ['-g']
 
 if cc.has_argument('-Wno-format-truncation')
 	default_cflags += '-Wno-format-truncation'

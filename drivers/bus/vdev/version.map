@@ -7,9 +7,6 @@ DPDK_21 {
 	rte_vdev_remove_custom_scan;
 	rte_vdev_uninit;
 	rte_vdev_unregister;
-	__emutls_v.per_lcore__thread_id;
-	__emutls_get_address;
-	__emutls_v.per_lcore__rte_errno;
 
 
 	local: *;
