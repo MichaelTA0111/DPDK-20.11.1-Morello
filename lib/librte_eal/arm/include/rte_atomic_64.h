@@ -45,7 +45,8 @@ rte_atomic_thread_fence(int memorder)
 
 /*------------------------ 128 bit atomic operations -------------------------*/
 
-#if defined(__ARM_FEATURE_ATOMICS) || defined(RTE_ARM_FEATURE_ATOMICS)
+#if 0
+// #if defined(__ARM_FEATURE_ATOMICS) || defined(RTE_ARM_FEATURE_ATOMICS)
 #if defined(RTE_CC_CLANG)
 #define __LSE_PREAMBLE	".arch armv8-a+lse\n"
 #else
@@ -110,7 +111,8 @@ rte_atomic128_cmp_exchange(rte_int128_t *dst, rte_int128_t *exp,
 	rte_int128_t desired = *src;
 	rte_int128_t old;
 
-#if defined(__ARM_FEATURE_ATOMICS) || defined(RTE_ARM_FEATURE_ATOMICS)
+#if 0
+// #if defined(__ARM_FEATURE_ATOMICS) || defined(RTE_ARM_FEATURE_ATOMICS)
 	if (success == __ATOMIC_RELAXED)
 		__cas_128_relaxed(dst, exp, desired);
 	else if (success == __ATOMIC_ACQUIRE)

@@ -1010,7 +1010,8 @@ has_atomics(void)
 {
 	int rc = 0;
 
-#if defined(__ARM_FEATURE_ATOMICS) || defined(RTE_ARM_FEATURE_ATOMICS)
+#if 0
+// #if defined(__ARM_FEATURE_ATOMICS) || defined(RTE_ARM_FEATURE_ATOMICS)
 	rc = 1;
 #endif
 	return rc;
