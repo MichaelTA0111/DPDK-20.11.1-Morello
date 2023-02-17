@@ -36,8 +36,6 @@
 
 /*Redefine the PTR_ADD function when compiling purecapability code*/
 #if __has_feature(capabilities)
-#define PYTILIA_IS_TAGGED(_ptr) \
-	printf("%s: %s %p tagged? %s\n", __FUNCTION__, #_ptr, _ptr, cheri_gettag(_ptr) ? "Y" : "N");
 	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
 	{
 		int i;
@@ -66,8 +64,6 @@
 		}
 	}
 	#define RTE_PTR_SUB(ptr, x) cheri_ptr_sub(ptr, x)
-#else
-#define PYTILIA_IS_TAGGED(_ptr)
 #endif
 
 /* start external socket ID's at a very high number */
@@ -134,8 +130,6 @@ malloc_heap_add_memory(struct malloc_heap *heap, struct rte_memseg_list *msl,
 {
 
 	struct malloc_elem *elem = start;
-	PYTILIA_IS_TAGGED(elem);
-	PYTILIA_IS_TAGGED(msl);
 	malloc_elem_init(elem, heap, msl, len, elem, len);
 
 	malloc_elem_insert(elem);
@@ -173,7 +167,6 @@ malloc_add_seg(const struct rte_memseg_list *msl,
 
 	found_msl = &mcfg->memsegs[msl_idx];
 
-	PYTILIA_IS_TAGGED(ms->addr);
 	malloc_heap_add_memory(heap, found_msl, ms->addr, len);
 
 	heap->total_size += len;

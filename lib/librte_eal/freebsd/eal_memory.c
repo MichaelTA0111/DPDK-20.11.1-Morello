@@ -23,8 +23,6 @@
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
 
-#define PYTILIA_IS_TAGGED(_ptr) \
-	printf("%s: %s %p tagged? %s\n", __FUNCTION__, #_ptr, _ptr, cheri_gettag(_ptr) ? "Y" : "N");
 /*Redefine the PTR_ADD function when compiling purecapability code*/
 #if __has_feature(capabilities)
 	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
@@ -125,7 +123,6 @@ rte_eal_hugepage_init(void)
 		}
 		msl->base_va = addr;
 		msl->len = mem_sz;
-		PYTILIA_IS_TAGGED(addr);
 		eal_memseg_list_populate(msl, addr, n_segs);
 		return 0;
 	}

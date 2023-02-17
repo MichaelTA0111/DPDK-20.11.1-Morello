@@ -37,9 +37,6 @@
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
 
-#define PYTILIA_IS_TAGGED(_ptr) \
-	printf("%s: %s %p tagged? %s\n", __FUNCTION__, #_ptr, _ptr, cheri_gettag(_ptr) ? "Y" : "N");
-
 /*Redefine the PTR_ADD function when compiling purecapability code*/
 #if __has_feature(capabilities)
 	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
@@ -430,7 +427,6 @@ rte_mempool_populate_virt(struct rte_mempool *mp, char *addr,
 	size_t off, phys_len;
 	int ret, cnt = 0;
 	int i;
-    PYTILIA_IS_TAGGED(addr);
 	if (mp->flags & MEMPOOL_F_NO_IOVA_CONTIG)
 		return rte_mempool_populate_iova(mp, addr, RTE_BAD_IOVA,
 			len, free_cb, opaque);
@@ -456,7 +452,6 @@ rte_mempool_populate_virt(struct rte_mempool *mp, char *addr,
 				break;
 		}
 
-		PYTILIA_IS_TAGGED(va);
 		ret = rte_mempool_populate_iova(mp, va, iova,
  			phys_len, free_cb, opaque);
 		if (ret == 0)

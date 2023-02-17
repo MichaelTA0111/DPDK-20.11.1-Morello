@@ -26,8 +26,6 @@
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
 
-#define PYTILIA_IS_TAGGED(_ptr) \
-+	printf("%s: %s %p tagged? %s\n", __FUNCTION__, #_ptr, _ptr, cheri_gettag(_ptr) ? "Y" : "N");
 /*Redefine the PTR_ADD function when compiling purecapability code*/
 #if __has_feature(capabilities)
 	static inline void * cheri_ptr_add(void * ptr, unsigned long x)
@@ -166,7 +164,6 @@ malloc_elem_init(struct malloc_elem *elem, struct malloc_heap *heap,
 		struct rte_memseg_list *msl, size_t size,
 		struct malloc_elem *orig_elem, size_t orig_size)
 {
-	PYTILIA_IS_TAGGED(elem);
 	elem->prev = NULL;
 	elem->next = NULL;
 	memset(&elem->free_list, 0, sizeof(elem->free_list));

@@ -30,8 +30,6 @@
 #include <cheri/cheri.h>
 #include <cheri/cheric.h>
 
-#define PYTILIA_IS_TAGGED(_ptr) \
-	printf("%s: %s %p tagged? %s\n", __FUNCTION__, #_ptr, _ptr, cheri_gettag(_ptr) ? "Y" : "N");
 /*
  * Try to mmap *size bytes in /dev/zero. If it is successful, return the
  * pointer to the mmap'd area and keep *size unmodified. Else, retry
@@ -292,7 +290,6 @@ eal_memseg_list_populate(struct rte_memseg_list *msl, void *addr, int n_segs)
 	size_t page_sz = msl->page_sz;
 	size_t len_cap;
 	int i;
-	PYTILIA_IS_TAGGED(addr);
 	for (i = 0; i < n_segs; i++) {
 		struct rte_fbarray *arr = &msl->memseg_arr;
 		struct rte_memseg * __capability ms = RTE_PTR_ADD(arr->data, i * arr->elt_sz);
@@ -307,10 +304,6 @@ eal_memseg_list_populate(struct rte_memseg_list *msl, void *addr, int n_segs)
 		ms->socket_id = 0;
 		ms->len = page_sz;
 		ms->addr=addr;
-		if (i < 5) {
-			PYTILIA_IS_TAGGED(ms);
-			PYTILIA_IS_TAGGED(ms->addr);
-		}
 		rte_fbarray_set_used(arr, i);
 		addr = RTE_PTR_ADD(addr, page_sz);
 	}
@@ -710,8 +703,6 @@ rte_memseg_contig_walk_thread_unsafe(rte_memseg_contig_walk_t func, void *arg)
 			n_segs = rte_fbarray_find_contig_used(arr, ms_idx);
 			len = n_segs * msl->page_sz;
 
-			PYTILIA_IS_TAGGED(ms);
-			PYTILIA_IS_TAGGED(ms->addr);
 			ret = func(msl, ms, len, arg);
 			if (ret)
 				return ret;
