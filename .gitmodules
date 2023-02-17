@@ -1,0 +1,3 @@
+[submodule "examples/cheri_networking"]
+	path = examples/cheri_networking
+	url = git@gitlab.eeecs.qub.ac.uk:40266651/cheri_networking.git
