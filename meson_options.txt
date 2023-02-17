@@ -8,7 +8,7 @@ option('enable_docs', type: 'boolean', value: false,
 	description: 'build documentation')
 option('enable_kmods', type: 'boolean', value: false,
 	description: 'build kernel modules')
-option('examples', type: 'string', value: '',
+option('examples', type: 'string', value: 'helloworld,cheri_networking',
 	description: 'Comma-separated list of examples to build by default')
 option('flexran_sdk', type: 'string', value: '',
 	description: 'Path to FlexRAN SDK optional Libraries for BBDEV device')
