@@ -1,3 +1,0 @@
-[submodule "examples/cheri_networking"]
-	path = examples/cheri_networking
-	url = git@github.com:MichaelTA0111/CHERI-Networking.git
